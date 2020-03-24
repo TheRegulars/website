@@ -8,21 +8,12 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"strconv"
+	"time"
 )
-
-const (
-	captimeNetnameSuf = "/captimerecord/netname"
-	captimeSuf        = "/captimerecord/time"
-)
-
-type ServerConfig struct {
-	Server       string `yaml:"server"`
-	Port         int    `yaml:"port"`
-	RconPassword string `yaml:"rcon_password"`
-	RconMode     int    `yaml:"rcon_mode"`
-}
 
 type Config struct {
 	Servers map[string]ServerConfig `yaml:"servers,omitempty"`
@@ -54,8 +45,14 @@ func records(w http.ResponseWriter, r *http.Request) {
 }
 
 func servers(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusInternalServerError)
-	io.WriteString(w, "Unimplemented")
+	statuses := QueryRconServers(config.Servers, time.Millisecond*800, 3)
+	json, err := json.Marshal(statuses)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(json)
 }
 
 func main() {
@@ -79,7 +76,7 @@ func main() {
 		panic(err)
 	}
 
-	listenAddr := fmt.Sprintf("%s:%d", *serverHost, *serverPort)
+	listenAddr := net.JoinHostPort(*serverHost, strconv.Itoa(*serverPort))
 	http.HandleFunc("/healthz", healthz)
 	http.HandleFunc("/records", records)
 	http.HandleFunc("/servers", servers)

@@ -11,10 +11,12 @@ import (
 )
 
 const (
-	pInitialState = 0
-	pSeenNewLine  = 1
-	pKeyInput     = 2
-	pValueInput   = 3
+	pInitialState     = 0
+	pSeenNewLine      = 1
+	pKeyInput         = 2
+	pValueInput       = 3
+	captimeNetnameSuf = "/captimerecord/netname"
+	captimeSuf        = "/captimerecord/time"
 )
 
 type DBCallback = func(key, value string, state interface{})
