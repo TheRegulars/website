@@ -26,10 +26,10 @@ const (
 )
 
 type ServerConfig struct {
-	Server       string `yaml:"server"`
-	Port         int    `yaml:"port"`
-	RconPassword string `yaml:"rcon_password"`
-	RconMode     int    `yaml:"rcon_mode"`
+	Server       string `json:"server" yaml:"server"`
+	Port         int    `json:"port" yaml:"port"`
+	RconPassword string `json:"rcon_password" yaml:"rcon_password"`
+	RconMode     int    `json:"rcon_mode" yaml:"rcon_mode"`
 }
 
 type Player struct {

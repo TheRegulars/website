@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
@@ -16,8 +17,8 @@ import (
 )
 
 type Config struct {
-	Servers map[string]ServerConfig `yaml:"servers,omitempty"`
-	GameDB  []string                `yaml:"gamedb,omitempty"`
+	Servers map[string]ServerConfig `json:"servers,omitempty" yaml:"servers,omitempty"`
+	GameDB  []string                `json:"gamedb,omitempty" yaml:"gamedb,omitempty"`
 }
 
 var serverPort = flag.Int("port", 8080, "HTTP Server port")
@@ -55,6 +56,26 @@ func servers(w http.ResponseWriter, r *http.Request) {
 	w.Write(json)
 }
 
+func validateConfig(conf *Config) {
+	schemaLoader := gojsonschema.NewStringLoader(configSchema)
+	schema, err := gojsonschema.NewSchema(schemaLoader)
+	if err != nil {
+		panic(err)
+	}
+	documentLoader := gojsonschema.NewGoLoader(conf)
+	res, err := schema.Validate(documentLoader)
+	if err != nil {
+		panic(err)
+	}
+	if !res.Valid() {
+		fmt.Println("Configuration is invalid: ")
+		for _, err := range res.Errors() {
+			fmt.Println(err)
+		}
+		os.Exit(1)
+	}
+}
+
 func main() {
 	var filename string
 
@@ -67,13 +88,18 @@ func main() {
 	filename = flag.Arg(0)
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
-	// TODO: config schema
 	err = yaml.Unmarshal(data, &config)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+	}
+
+	// TODO: reload config on SIGHUP
+	validateConfig(&config)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	listenAddr := net.JoinHostPort(*serverHost, strconv.Itoa(*serverPort))
