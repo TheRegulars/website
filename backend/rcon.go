@@ -56,7 +56,7 @@ type ServerStatus struct {
 		OffsetMax  float64 `json:"offset_max"`
 		OffsetSdev float64 `json:"offset_sdev"`
 	} `json:"timing"`
-	PlayersActive int64    `json:"players_max"`
+	PlayersActive int64    `json:"players_active"`
 	PlayersMax    int64    `json:"players_max"`
 	Players       []Player `json:"players,omitempty"`
 }

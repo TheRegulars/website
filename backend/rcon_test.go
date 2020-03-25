@@ -62,4 +62,8 @@ func TestParseRconStatus(t *testing.T) {
 	if status.Timing.OffsetSdev != 0.0 {
 		t.Error("Incorrect sdev timing ", status)
 	}
+
+	if status.PlayersMax != 24 {
+		t.Error("Incorrect max players ", status)
+	}
 }
