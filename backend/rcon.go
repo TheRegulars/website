@@ -56,9 +56,20 @@ type ServerStatus struct {
 		OffsetMax  float64 `json:"offset_max"`
 		OffsetSdev float64 `json:"offset_sdev"`
 	} `json:"timing"`
-	PlayersActive int64    `json:"players_active"`
+	PlayersActive int64    `json:"players_count"`
 	PlayersMax    int64    `json:"players_max"`
 	Players       []Player `json:"players,omitempty"`
+}
+
+type PlayerStats struct {
+	Bots       int
+	Spectators int
+	Active     int
+}
+
+type ServerMetrics struct {
+	Status      *ServerStatus
+	PlayersInfo PlayerStats
 }
 
 type rconReader struct {
@@ -325,4 +336,40 @@ func QueryRconServers(servers map[string]ServerConfig, timeout time.Duration, re
 	wg.Wait()
 
 	return statuses
+}
+
+func QueryServerMetrics(server ServerConfig, timeout time.Duration, retries int) (*ServerMetrics, error) {
+	var metrics ServerMetrics
+	var wg sync.WaitGroup
+	var statusErr error
+
+	metrics.PlayersInfo.Bots = 0
+	metrics.PlayersInfo.Spectators = 0
+	metrics.PlayersInfo.Active = 0
+
+	wg.Add(1)
+	go func(s *ServerConfig, retries int) {
+		defer wg.Done()
+		for i := 0; i < retries; i++ {
+			deadline := time.Now().Add(timeout)
+			status, statusErr := QueryRconStatus(s, deadline)
+			if statusErr == nil {
+				metrics.Status = status
+				for _, p := range status.Players {
+					if p.IsBot {
+						metrics.PlayersInfo.Bots++
+					}
+
+					if p.Frags == -666 {
+						metrics.PlayersInfo.Spectators++
+					} else {
+						metrics.PlayersInfo.Active++
+					}
+				}
+				return
+			}
+		}
+	}(&server, retries)
+	wg.Wait()
+	return &metrics, statusErr
 }

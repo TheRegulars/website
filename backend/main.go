@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v2"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"log"
@@ -24,6 +25,41 @@ type Config struct {
 var serverPort = flag.Int("port", 8080, "HTTP Server port")
 var serverHost = flag.String("addr", "", "Listen ip, empty by default")
 var config Config
+var viewTemplates = template.Must(template.Must(template.New("exporters").Parse(`
+<html>
+  <head>
+    <title>Xonotic Exporter</title>
+  </head>
+  <body>
+    <h1>Xonotic Exporter</h1>
+	<ul>
+	{{range .}}<li><a href="/metrics?target={{ . }}">{{ . }}</a></li>{{end}}
+	</ul>
+  </body>
+</html>
+`)).New("metrics").Parse(`
+# server: {{ .Name }}
+# hostname: {{ .Metrics.Status.Hostname }}
+# map: powerstation_r2
+xonotic_sv_public{instance="{{ .Name }}"} {{ .Metrics.Status.Public }}
+
+# Players info
+xonotic_players_count{instance="{{ .Name }}"} {{ .Metrics.Status.PlayersActive }}
+xonotic_players_max{instance="{{ .Name }}"} {{ .Metrics.Status.PlayersMax }}
+xonotic_players_bots{instance="{{ .Name }}"} {{ .Metrics.PlayersInfo.Bots }}
+xonotic_players_spectators{instance="{{ .Name }}"} {{ .Metrics.PlayersInfo.Spectators }}
+xonotic_players_active{instance="{{ .Name }}"} {{ .Metrics.PlayersInfo.Active }}
+
+# Performance timings
+xonotic_timing_cpu{instance="{{ .Name }}"} {{ .Metrics.Status.Timing.CPU }}
+xonotic_timing_lost{instance="{{ .Name }}"} {{ .Metrics.Status.Timing.Lost }}
+xonotic_timing_offset_avg{instance="{{ .Name }}"} {{ .Metrics.Status.Timing.OffsetAvg }}
+xonotic_timing_max{instance="{{ .Name }}"} {{ .Metrics.Status.Timing.OffsetMax }}
+xonotic_timing_sdev{instance="{{ .Name }}"} {{ .Metrics.Status.Timing.OffsetSdev }}
+
+# Network rtt
+xonotic_rtt{instance="mars.regulars.win", from="pub.regulars.win"} 0.00014080300752539188
+`))
 
 func healthz(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "OK\n")
@@ -54,6 +90,45 @@ func servers(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(json)
+}
+
+func exporters(w http.ResponseWriter, r *http.Request) {
+	var servers []string
+	for k := range config.Servers {
+		servers = append(servers, k)
+	}
+	w.Header().Set("Content-Type", "text/html")
+	err := viewTemplates.ExecuteTemplate(w, "exporters", servers)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func metrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	server := r.FormValue("target")
+	serverConf, ok := config.Servers[server]
+	if !ok {
+		http.Error(w, "Server not found", http.StatusNotFound)
+		return
+	}
+	metrics, err := QueryServerMetrics(serverConf, time.Millisecond*800, 3)
+	if err != nil {
+		http.Error(w, "Failed to load metrics", http.StatusInternalServerError)
+		return
+	}
+	templateContext := struct {
+		Name    string
+		Metrics *ServerMetrics
+	}{
+		Name:    server,
+		Metrics: metrics,
+	}
+	err = viewTemplates.ExecuteTemplate(w, "metrics", templateContext)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func validateConfig(conf *Config) {
@@ -106,5 +181,7 @@ func main() {
 	http.HandleFunc("/healthz", healthz)
 	http.HandleFunc("/records", records)
 	http.HandleFunc("/servers", servers)
+	http.HandleFunc("/exporters", exporters)
+	http.HandleFunc("/metrics", metrics)
 	log.Fatal(http.ListenAndServe(listenAddr, nil))
 }
