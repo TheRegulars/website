@@ -68,8 +68,10 @@ type PlayerStats struct {
 }
 
 type ServerMetrics struct {
-	Status      *ServerStatus
-	PlayersInfo PlayerStats
+	Status       *ServerStatus
+	PlayersInfo  PlayerStats
+	PingDuration time.Duration
+	PingSeconds  float64
 }
 
 type rconReader struct {
@@ -311,6 +313,30 @@ func QueryRconStatus(server *ServerConfig, deadline time.Time) (*ServerStatus, e
 	return &status, err
 }
 
+func PingServer(server *ServerConfig, deadline time.Time) (time.Duration, error) {
+	addr := net.JoinHostPort(server.Server, strconv.Itoa(server.Port))
+	invalidDuration := time.Second * -1
+	conn, err := net.Dial("udp", addr)
+	if err != nil {
+		return invalidDuration, err
+	}
+	defer conn.Close()
+	conn.SetDeadline(deadline)
+	readBuffer := make([]byte, XonMSS)
+	conn.Write([]byte(PingPacket))
+	start := time.Now()
+	n, err := conn.Read(readBuffer)
+	if err != nil {
+		return invalidDuration, err
+	}
+
+	if bytes.HasPrefix(readBuffer[:n], []byte(PingResponse)) {
+		diff := time.Now().Sub(start)
+		return diff, nil
+	}
+	return invalidDuration, err
+}
+
 func QueryRconServers(servers map[string]ServerConfig, timeout time.Duration, retries int) map[string]*ServerStatus {
 	var mux sync.Mutex
 	var wg sync.WaitGroup
@@ -347,7 +373,7 @@ func QueryServerMetrics(server ServerConfig, timeout time.Duration, retries int)
 	metrics.PlayersInfo.Spectators = 0
 	metrics.PlayersInfo.Active = 0
 
-	wg.Add(1)
+	wg.Add(2)
 	go func(s *ServerConfig, retries int) {
 		defer wg.Done()
 		for i := 0; i < retries; i++ {
@@ -366,6 +392,19 @@ func QueryServerMetrics(server ServerConfig, timeout time.Duration, retries int)
 						metrics.PlayersInfo.Active++
 					}
 				}
+				return
+			}
+		}
+	}(&server, retries)
+
+	go func(s *ServerConfig, retries int) {
+		defer wg.Done()
+		for i := 0; i < retries; i++ {
+			deadline := time.Now().Add(timeout)
+			d, err := PingServer(s, deadline)
+			if err == nil {
+				metrics.PingDuration = d
+				metrics.PingSeconds = float64(d) / float64(time.Second)
 				return
 			}
 		}

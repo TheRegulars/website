@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/xeipuuv/gojsonschema"
@@ -57,8 +58,8 @@ xonotic_timing_offset_avg{instance="{{ .Name }}"} {{ .Metrics.Status.Timing.Offs
 xonotic_timing_max{instance="{{ .Name }}"} {{ .Metrics.Status.Timing.OffsetMax }}
 xonotic_timing_sdev{instance="{{ .Name }}"} {{ .Metrics.Status.Timing.OffsetSdev }}
 
-# Network rtt
-xonotic_rtt{instance="mars.regulars.win", from="pub.regulars.win"} 0.00014080300752539188
+# Network rtt {{ .Metrics.PingDuration }}
+xonotic_rtt{instance="{{ .Name }}", from="{{ .Hostname }}"} {{ .Metrics.PingSeconds }}
 `))
 
 func healthz(w http.ResponseWriter, r *http.Request) {
@@ -97,38 +98,49 @@ func exporters(w http.ResponseWriter, r *http.Request) {
 	for k := range config.Servers {
 		servers = append(servers, k)
 	}
-	w.Header().Set("Content-Type", "text/html")
 	err := viewTemplates.ExecuteTemplate(w, "exporters", servers)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+	w.Header().Set("Content-Type", "text/html")
 }
 
 func metrics(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	var err error
 	server := r.FormValue("target")
+	templateContext := struct {
+		Name     string
+		Hostname string
+		Metrics  *ServerMetrics
+	}{
+		Name:     server,
+		Hostname: "",
+		Metrics:  nil,
+	}
+
 	serverConf, ok := config.Servers[server]
 	if !ok {
-		http.Error(w, "Server not found", http.StatusNotFound)
+		err = errors.New("Server not found")
 		return
 	}
 	metrics, err := QueryServerMetrics(serverConf, time.Millisecond*800, 3)
 	if err != nil {
-		http.Error(w, "Failed to load metrics", http.StatusInternalServerError)
-		return
+		err = errors.New("Failed to load metrics")
+		goto ErrorHandler
 	}
-	templateContext := struct {
-		Name    string
-		Metrics *ServerMetrics
-	}{
-		Name:    server,
-		Metrics: metrics,
+	templateContext.Metrics = metrics
+	templateContext.Hostname, err = os.Hostname()
+	if err != nil {
+		goto ErrorHandler
 	}
 	err = viewTemplates.ExecuteTemplate(w, "metrics", templateContext)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		goto ErrorHandler
 	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	return
+ErrorHandler:
+	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
 func validateConfig(conf *Config) {

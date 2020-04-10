@@ -13,6 +13,8 @@ const (
 	RconResponseHeader string = QHeader + "n"
 	ChallengeRequest   string = QHeader + "getchallenge"
 	ChallengeHeader    string = QHeader + "challenge "
+	PingPacket         string = QHeader + "ping"
+	PingResponse       string = QHeader + "ack"
 )
 
 func RconNonSecurePacket(command string, password string, buf *bytes.Buffer) {
