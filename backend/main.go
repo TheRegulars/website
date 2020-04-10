@@ -40,6 +40,7 @@ var viewTemplates = template.Must(template.Must(template.New("exporters").Parse(
 </html>
 `)).New("metrics").Parse(`
 # server: {{ .Name }}
+{{if .Metrics.Status}}
 # hostname: {{ .Metrics.Status.Hostname }}
 # map: powerstation_r2
 xonotic_sv_public{instance="{{ .Name }}"} {{ .Metrics.Status.Public }}
@@ -57,7 +58,12 @@ xonotic_timing_lost{instance="{{ .Name }}"} {{ .Metrics.Status.Timing.Lost }}
 xonotic_timing_offset_avg{instance="{{ .Name }}"} {{ .Metrics.Status.Timing.OffsetAvg }}
 xonotic_timing_max{instance="{{ .Name }}"} {{ .Metrics.Status.Timing.OffsetMax }}
 xonotic_timing_sdev{instance="{{ .Name }}"} {{ .Metrics.Status.Timing.OffsetSdev }}
-
+{{end}}{{if .Metrics.Memory}}
+# Memory
+xonotic_memstats_pools_count{instance="{{ .Name }}"} {{ .Metrics.Memory.PoolsCount }}
+xonotic_memstats_pools_total{instance="{{ .Name }}"} {{ .Metrics.Memory.PoolsTotal }}
+xonotic_memstats_allocated_size{instance="{{ .Name }}"} {{ .Metrics.Memory.TotalAllocatedSize }}
+{{end}}
 # Network rtt {{ .Metrics.PingDuration }}
 xonotic_rtt{instance="{{ .Name }}", from="{{ .Hostname }}"} {{ .Metrics.PingSeconds }}
 `))
@@ -101,6 +107,7 @@ func exporters(w http.ResponseWriter, r *http.Request) {
 	err := viewTemplates.ExecuteTemplate(w, "exporters", servers)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	w.Header().Set("Content-Type", "text/html")
 }

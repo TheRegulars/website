@@ -16,6 +16,10 @@ players:  0 active (24 max)
 
 ^2IP                                             %pl ping  time   frags  no   name`
 
+var memstatsRcon string = `286 memory pools, totalling 352844962 bytes (336.499MB)
+total allocated size: 1180312470 bytes (1125.634MB)
+`
+
 func TestParsePlayer(t *testing.T) {
 	var player Player
 
@@ -65,5 +69,28 @@ func TestParseRconStatus(t *testing.T) {
 
 	if status.PlayersMax != 24 {
 		t.Error("Incorrect max players ", status)
+	}
+}
+
+func TestParseRconMemstats(t *testing.T) {
+	var memstats ServerMemstats
+
+	scanner := bufio.NewScanner(strings.NewReader(memstatsRcon))
+	err := ParseMemstats(scanner, &memstats)
+
+	if err != nil {
+		t.Error("Error during parsing ", err)
+	}
+
+	if memstats.PoolsCount != 286 {
+		t.Error("Pools count was parsed incorrectly ", memstats.PoolsCount)
+	}
+
+	if memstats.PoolsTotal != 352844962 {
+		t.Error("Pools totalling was parsed incorrectly ", memstats.PoolsTotal)
+	}
+
+	if memstats.TotalAllocatedSize != 1180312470 {
+		t.Error("Total allocated size was parsed incorrectly ", memstats.TotalAllocatedSize)
 	}
 }

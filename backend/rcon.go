@@ -67,15 +67,30 @@ type PlayerStats struct {
 	Active     int
 }
 
+type ServerMemstats struct {
+	PoolsCount         int
+	PoolsTotal         int64
+	TotalAllocatedSize int64
+}
+
 type ServerMetrics struct {
 	Status       *ServerStatus
 	PlayersInfo  PlayerStats
+	Memory       *ServerMemstats
 	PingDuration time.Duration
 	PingSeconds  float64
 }
 
 type rconReader struct {
 	conn net.Conn
+}
+
+type RconCallback = func(scanner *bufio.Scanner, result interface{}) error
+
+type RconScannerRPC struct {
+	callback RconCallback
+	state    interface{}
+	command  string
 }
 
 var psvStatusRe *regexp.Regexp = regexp.MustCompile(`^"sv_public"\s+is\s+"(-?\d+)`)
@@ -85,6 +100,9 @@ var pTimingRe *regexp.Regexp = regexp.MustCompile(
 var pPlayersRe *regexp.Regexp = regexp.MustCompile(`^players:\s+(?P<count>\d+)\s+active\s+\((?P<max>\d+)\s+max\)`)
 var playerRe *regexp.Regexp = regexp.MustCompile(`^\^(?:3|7)(?P<ip>[^\s]+)\s+(?P<pl>-?\d+)\s+` +
 	`(?P<ping>-?\d+)\s+(?P<time>[\d:]+)\s+(?P<frags>-?\d+)\s+#(?P<no>\d+)\s+\^7(?P<nick>.*)$`)
+
+var memPoolsRe *regexp.Regexp = regexp.MustCompile(`^(?P<count>\d+) memory pools, totalling (?P<count>\d+) bytes`)
+var memAllocatedRe *regexp.Regexp = regexp.MustCompile(`^total allocated size: (?P<allocated>\d+) bytes`)
 
 func parseRconPlayer(line []byte, p *Player) error {
 	var err error = nil
@@ -243,6 +261,46 @@ LOOP:
 	return scanner.Err()
 }
 
+func ParseMemstats(scanner *bufio.Scanner, stats *ServerMemstats) error {
+	parseState := 0
+LOOP:
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		switch parseState {
+		case 0:
+			res := memPoolsRe.FindSubmatch(line)
+			if len(res) != (memPoolsRe.NumSubexp() + 1) {
+				return errors.New("Failed to parse memstats")
+			}
+			d, err := strconv.ParseInt(string(res[1]), 10, 32)
+			if err != nil {
+				return err
+			}
+			stats.PoolsCount = int(d)
+			d, err = strconv.ParseInt(string(res[2]), 10, 64)
+			if err != nil {
+				return err
+			}
+			stats.PoolsTotal = d
+			parseState = 1
+		case 1:
+			res := memAllocatedRe.FindSubmatch(line)
+			if len(res) != (memAllocatedRe.NumSubexp() + 1) {
+				return errors.New("Failed to parse memstats")
+			}
+			d, err := strconv.ParseInt(string(res[1]), 10, 64)
+			if err != nil {
+				return err
+			}
+			stats.TotalAllocatedSize = d
+			break LOOP
+		default:
+			return errors.New("Impossible state")
+		}
+	}
+	return scanner.Err()
+}
+
 func (r *rconReader) Read(p []byte) (int, error) {
 	for {
 		n, err := r.conn.Read(p)
@@ -256,16 +314,14 @@ func (r *rconReader) Read(p []byte) (int, error) {
 	}
 }
 
-func QueryRconStatus(server *ServerConfig, deadline time.Time) (*ServerStatus, error) {
-	var status ServerStatus
+func rconScanner(server *ServerConfig, deadline time.Time, rpc RconScannerRPC) error {
 	var challenge []byte
 	var w bytes.Buffer
 
-	command := "sv_public\x00status 1"
 	addr := net.JoinHostPort(server.Server, strconv.Itoa(server.Port))
 	conn, err := net.Dial("udp", addr)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer conn.Close()
 	conn.SetDeadline(deadline)
@@ -274,14 +330,14 @@ func QueryRconStatus(server *ServerConfig, deadline time.Time) (*ServerStatus, e
 	if server.RconMode == rconChallengeSecureMode {
 		_, err := conn.Write([]byte(ChallengeRequest))
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		for {
 			// read until we receive challenge response
 			n, err := conn.Read(readBuffer)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			if bytes.HasPrefix(readBuffer[:n], []byte(ChallengeHeader)) {
 				challengeEnd := len(ChallengeHeader)
@@ -296,21 +352,42 @@ func QueryRconStatus(server *ServerConfig, deadline time.Time) (*ServerStatus, e
 				break
 			}
 		}
-		RconSecureChallengePacket(command, server.RconPassword, challenge, &w)
+		RconSecureChallengePacket(rpc.command, server.RconPassword, challenge, &w)
 	} else if server.RconMode == rconTimeSecureMode {
-		RconSecureTimePacket(command, server.RconPassword, time.Now(), &w)
+		RconSecureTimePacket(rpc.command, server.RconPassword, time.Now(), &w)
 	} else {
-		RconNonSecurePacket(command, server.RconPassword, &w)
+		RconNonSecurePacket(rpc.command, server.RconPassword, &w)
 	}
 	_, err = conn.Write(w.Bytes())
 	if err != nil {
-		return nil, err
+		return err
 	}
 	rconReader := &rconReader{conn: conn}
 	scanner := bufio.NewScanner(rconReader)
 	scanner.Buffer(readBuffer, XonMSS)
-	err = ParseRconStatus(scanner, &status)
-	return &status, err
+	return rpc.callback(scanner, rpc.state)
+}
+
+func QueryRconStatus(server *ServerConfig, deadline time.Time) (*ServerStatus, error) {
+	var status ServerStatus
+	callback := func(s *bufio.Scanner, result interface{}) error {
+		status, ok := result.(*ServerStatus)
+		if !ok {
+			return errors.New("Invalid result type")
+		}
+		return ParseRconStatus(s, status)
+	}
+	rpc := RconScannerRPC{
+		command:  "sv_public\x00status 1",
+		callback: callback,
+		state:    &status,
+	}
+	err := rconScanner(server, deadline, rpc)
+	if err == nil {
+		return &status, err
+	} else {
+		return nil, err
+	}
 }
 
 func PingServer(server *ServerConfig, deadline time.Time) (time.Duration, error) {
@@ -335,6 +412,29 @@ func PingServer(server *ServerConfig, deadline time.Time) (time.Duration, error)
 		return diff, nil
 	}
 	return invalidDuration, err
+}
+
+func QueryRconMemstats(server *ServerConfig, deadline time.Time) (*ServerMemstats, error) {
+	var memstats ServerMemstats
+	callback := func(s *bufio.Scanner, result interface{}) error {
+		stats, ok := result.(*ServerMemstats)
+		if !ok {
+			return errors.New("Invalid result type")
+		}
+		return ParseMemstats(s, stats)
+	}
+	rpc := RconScannerRPC{
+		command:  "memstats",
+		callback: callback,
+		state:    &memstats,
+	}
+
+	err := rconScanner(server, deadline, rpc)
+	if err == nil {
+		return &memstats, err
+	} else {
+		return nil, err
+	}
 }
 
 func QueryRconServers(servers map[string]ServerConfig, timeout time.Duration, retries int) map[string]*ServerStatus {
@@ -368,12 +468,14 @@ func QueryServerMetrics(server ServerConfig, timeout time.Duration, retries int)
 	var metrics ServerMetrics
 	var wg sync.WaitGroup
 	var statusErr error
+	var pingErr error
+	var memstatsErr error
 
 	metrics.PlayersInfo.Bots = 0
 	metrics.PlayersInfo.Spectators = 0
 	metrics.PlayersInfo.Active = 0
 
-	wg.Add(2)
+	wg.Add(3)
 	go func(s *ServerConfig, retries int) {
 		defer wg.Done()
 		for i := 0; i < retries; i++ {
@@ -394,6 +496,7 @@ func QueryServerMetrics(server ServerConfig, timeout time.Duration, retries int)
 				}
 				return
 			}
+			log.Printf("rcon error: %v", statusErr)
 		}
 	}(&server, retries)
 
@@ -401,14 +504,36 @@ func QueryServerMetrics(server ServerConfig, timeout time.Duration, retries int)
 		defer wg.Done()
 		for i := 0; i < retries; i++ {
 			deadline := time.Now().Add(timeout)
-			d, err := PingServer(s, deadline)
-			if err == nil {
+			d, pingErr := PingServer(s, deadline)
+			if pingErr == nil {
 				metrics.PingDuration = d
 				metrics.PingSeconds = float64(d) / float64(time.Second)
 				return
 			}
+			log.Printf("ping error: %v", pingErr)
+		}
+	}(&server, retries)
+
+	go func(s *ServerConfig, retries int) {
+		defer wg.Done()
+		for i := 0; i < retries; i++ {
+			deadline := time.Now().Add(timeout)
+			mem, memstatsErr := QueryRconMemstats(s, deadline)
+			if memstatsErr == nil {
+				metrics.Memory = mem
+				return
+			}
+			log.Printf("memstats error: %v", memstatsErr)
 		}
 	}(&server, retries)
 	wg.Wait()
-	return &metrics, statusErr
+	err := statusErr
+	if err == nil {
+		if pingErr != nil {
+			err = pingErr
+		} else {
+			err = memstatsErr
+		}
+	}
+	return &metrics, err
 }
