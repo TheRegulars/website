@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "lib": ["dom", "es5"],
+        "target": "es5",
+        "noImplicitAny": true,
+        "noImplicitReturns": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "strictNullChecks": true,
+        "strict": true,
+        "sourceMap": true,
+        "rootDir": "src/",
+        "outDir": "dist/"
+    },
+    "exclude": [
+        "node_modules"
+    ]
+}
