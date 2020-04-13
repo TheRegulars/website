@@ -14,7 +14,10 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"sync/atomic"
+	"syscall"
 	"time"
 )
 
@@ -25,7 +28,7 @@ type Config struct {
 
 var serverPort = flag.Int("port", 8080, "HTTP Server port")
 var serverHost = flag.String("addr", "", "Listen ip, empty by default")
-var config Config
+var config atomic.Value
 var viewTemplates = template.Must(template.Must(template.New("exporters").Parse(`
 <html>
   <head>
@@ -73,7 +76,8 @@ func healthz(w http.ResponseWriter, r *http.Request) {
 }
 
 func records(w http.ResponseWriter, r *http.Request) {
-	records, err := ReadCaptimeRecords(config.GameDB)
+	conf := getConfig()
+	records, err := ReadCaptimeRecords(conf.GameDB)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -89,7 +93,8 @@ func records(w http.ResponseWriter, r *http.Request) {
 }
 
 func servers(w http.ResponseWriter, r *http.Request) {
-	statuses := QueryRconServers(config.Servers, time.Millisecond*800, 3)
+	conf := getConfig()
+	statuses := QueryRconServers(conf.Servers, time.Millisecond*800, 3)
 	json, err := json.Marshal(statuses)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -101,7 +106,9 @@ func servers(w http.ResponseWriter, r *http.Request) {
 
 func exporters(w http.ResponseWriter, r *http.Request) {
 	var servers []string
-	for k := range config.Servers {
+
+	conf := getConfig()
+	for k := range conf.Servers {
 		servers = append(servers, k)
 	}
 	err := viewTemplates.ExecuteTemplate(w, "exporters", servers)
@@ -114,6 +121,8 @@ func exporters(w http.ResponseWriter, r *http.Request) {
 
 func metrics(w http.ResponseWriter, r *http.Request) {
 	var err error
+
+	conf := getConfig()
 	server := r.FormValue("target")
 	templateContext := struct {
 		Name     string
@@ -125,7 +134,7 @@ func metrics(w http.ResponseWriter, r *http.Request) {
 		Metrics:  nil,
 	}
 
-	serverConf, ok := config.Servers[server]
+	serverConf, ok := conf.Servers[server]
 	if !ok {
 		err = errors.New("Server not found")
 		return
@@ -150,24 +159,57 @@ ErrorHandler:
 	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
-func validateConfig(conf *Config) {
+func validateConfig(conf *Config) bool {
 	schemaLoader := gojsonschema.NewStringLoader(configSchema)
 	schema, err := gojsonschema.NewSchema(schemaLoader)
 	if err != nil {
+		// configuration schema is invalid, this means some mistake in code
 		panic(err)
 	}
 	documentLoader := gojsonschema.NewGoLoader(conf)
 	res, err := schema.Validate(documentLoader)
 	if err != nil {
-		panic(err)
+		log.Printf("Error validating config: %v", err)
+		return false
 	}
 	if !res.Valid() {
-		fmt.Println("Configuration is invalid: ")
 		for _, err := range res.Errors() {
-			fmt.Println(err)
+			log.Println(err)
 		}
-		os.Exit(1)
+		return false
 	}
+	return true
+}
+
+func loadConfig(filename string) (*Config, bool) {
+	var config Config
+
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		log.Printf("Error reading config: %v", err)
+		return nil, false
+	}
+	err = yaml.Unmarshal(data, &config)
+	if err != nil {
+		log.Printf("Error parsing yaml config: %v", err)
+		return nil, false
+	}
+	ok := validateConfig(&config)
+	return &config, ok
+}
+
+func getConfig() *Config {
+	val := config.Load()
+	if val == nil {
+		// something stored invalid config, bug in code
+		panic("Nil config")
+	}
+	conf, ok := val.(*Config)
+	if !ok {
+		// something stored invalid config
+		panic("Stored invalid config")
+	}
+	return conf
 }
 
 func main() {
@@ -180,21 +222,31 @@ func main() {
 		os.Exit(1)
 	}
 	filename = flag.Arg(0)
-	data, err := ioutil.ReadFile(filename)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = yaml.Unmarshal(data, &config)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// TODO: reload config on SIGHUP
-	validateConfig(&config)
-	if err != nil {
-		log.Fatal(err)
+	conf, ok := loadConfig(filename)
+	if !ok {
+		fmt.Println("Configuration is invalid")
+		os.Exit(1)
 	}
+	config.Store(conf)
+
+	go func() {
+		sigHUP := make(chan os.Signal, 1)
+		signal.Notify(sigHUP, syscall.SIGHUP)
+
+		for {
+			select {
+			case <-sigHUP:
+				conf, ok := loadConfig(filename)
+				if !ok {
+					log.Println("Config wasn't updated because of errors")
+				} else {
+					config.Store(conf)
+					log.Println("Successfully updated config")
+				}
+			}
+		}
+	}()
 
 	listenAddr := net.JoinHostPort(*serverHost, strconv.Itoa(*serverPort))
 	http.HandleFunc("/healthz", healthz)
