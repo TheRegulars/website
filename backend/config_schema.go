@@ -22,6 +22,14 @@ const configSchema = `
 				"type": "string",
 				"minLength": 2
 			}
+		},
+		"gamedir": {
+			"type": "array",
+			"minItems": 1,
+			"items": {
+				"type": "string",
+				"minLength": 2
+			}
 		}
 	},
     "additionalProperties": false,

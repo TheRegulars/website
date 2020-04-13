@@ -24,11 +24,13 @@ import (
 type Config struct {
 	Servers map[string]ServerConfig `json:"servers,omitempty" yaml:"servers,omitempty"`
 	GameDB  []string                `json:"gamedb,omitempty" yaml:"gamedb,omitempty"`
+	GameDIR []string                `json:"gamedir,omitempty" yaml:"gamedir,omitempty"`
 }
 
 var serverPort = flag.Int("port", 8080, "HTTP Server port")
 var serverHost = flag.String("addr", "", "Listen ip, empty by default")
 var config atomic.Value
+var mapsState *MapsState
 var viewTemplates = template.Must(template.Must(template.New("exporters").Parse(`
 <html>
   <head>
@@ -159,6 +161,17 @@ ErrorHandler:
 	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
+func maps(w http.ResponseWriter, r *http.Request) {
+	mapsList := mapsState.ListMaps()
+	json, err := json.Marshal(mapsList)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(json)
+}
+
 func validateConfig(conf *Config) bool {
 	schemaLoader := gojsonschema.NewStringLoader(configSchema)
 	schema, err := gojsonschema.NewSchema(schemaLoader)
@@ -229,6 +242,11 @@ func main() {
 		os.Exit(1)
 	}
 	config.Store(conf)
+	// init maps state
+	mapsState = new(MapsState)
+	mapsState.gameDirs = func() []string {
+		return getConfig().GameDIR
+	}
 
 	go func() {
 		sigHUP := make(chan os.Signal, 1)
@@ -254,5 +272,6 @@ func main() {
 	http.HandleFunc("/servers", servers)
 	http.HandleFunc("/exporters", exporters)
 	http.HandleFunc("/metrics", metrics)
+	http.HandleFunc("/maps", maps)
 	log.Fatal(http.ListenAndServe(listenAddr, nil))
 }
