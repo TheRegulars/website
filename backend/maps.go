@@ -26,7 +26,7 @@ type MapnameCallback = func(key, value string, state interface{})
 
 var bspRe *regexp.Regexp = regexp.MustCompile(`^maps/([^/\\]+)\.bsp$`)
 
-func (s *MapsState) ListMaps() []string {
+func (s *MapsState) GetMapsSet() map[string]bool {
 	checkFiles := make(map[string]time.Time)
 	mapsFound := make(map[string]bool)
 	dirs := s.gameDirs()
@@ -107,13 +107,15 @@ func (s *MapsState) ListMaps() []string {
 			mapsFound[mapname] = true
 		}
 	}
+	// ignore special map for hud setup
+	delete(mapsFound, "_hudsetup")
+	return mapsFound
+}
+
+func (s *MapsState) ListMaps() []string {
+	mapsFound := s.GetMapsSet()
 	mapsList := make([]string, 0, len(mapsFound))
 	for mapname, _ := range mapsFound {
-		if mapname == "_hudsetup" {
-			// this special xon map for hud setup
-			// we ignore it
-			continue
-		}
 		mapsList = append(mapsList, mapname)
 	}
 	sort.Strings(mapsList)

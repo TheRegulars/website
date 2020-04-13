@@ -125,12 +125,18 @@ func ReadXonoticDB(filePath string, callback DBCallback, state interface{}) erro
 	return nil
 }
 
-func ReadCaptimeRecords(fileList []string) (Records, error) {
+func ReadCaptimeRecordsWithFilter(fileList []string, filter func(key, value string) bool) (Records, error) {
 	records := make(Records)
+
+	callback := func(key, value string, istate interface{}) {
+		if filter(key, value) {
+			updateRecords(key, value, istate)
+		}
+	}
 
 	for _, filePath := range fileList {
 		tempRecords := make(Records)
-		err := ReadXonoticDB(filePath, updateRecords, tempRecords)
+		err := ReadXonoticDB(filePath, callback, tempRecords)
 		if err != nil {
 			return nil, err
 		}

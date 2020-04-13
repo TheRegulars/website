@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -79,7 +80,21 @@ func healthz(w http.ResponseWriter, r *http.Request) {
 
 func records(w http.ResponseWriter, r *http.Request) {
 	conf := getConfig()
-	records, err := ReadCaptimeRecords(conf.GameDB)
+	mapsSet := mapsState.GetMapsSet()
+	filter := func(key, value string) bool {
+		i := strings.Index(key, "/")
+		if i >= 0 {
+			mapname := key[:i]
+			if _, ok := mapsSet[mapname]; ok {
+				return true
+			} else {
+				return false
+			}
+		} else {
+			return false
+		}
+	}
+	records, err := ReadCaptimeRecordsWithFilter(conf.GameDB, filter)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
