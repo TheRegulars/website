@@ -1,41 +1,42 @@
+/* tslint:disable:no-bitwise */
 
 const qfontAsciiTable: string[] = [
-     '\0', '#',  '#',  '#',  '#',  '.',  '#',  '#',
-     '#',  '\t', '\n', '#',  ' ',  '\r', '.',  '.',
-     '[',  ']',  '0',  '1',  '2',  '3',  '4',  '5',
-     '6',  '7',  '8',  '9',  '.',  '<',  '=',  '>',
-     ' ',  '!',  '"',  '#',  '$',  '%',  '&',  '\'',
-     '(',  ')',  '*',  '+',  ',',  '-',  '.',  '/',
-     '0',  '1',  '2',  '3',  '4',  '5',  '6',  '7',
-     '8',  '9',  ':',  ';',  '<',  '=',  '>',  '?',
-     '@',  'A',  'B',  'C',  'D',  'E',  'F',  'G',
-     'H',  'I',  'J',  'K',  'L',  'M',  'N',  'O',
-     'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',
-     'X',  'Y',  'Z',  '[',  '\\', ']',  '^',  '_',
-     '`',  'a',  'b',  'c',  'd',  'e',  'f',  'g',
-     'h',  'i',  'j',  'k',  'l',  'm',  'n',  'o',
-     'p',  'q',  'r',  's',  't',  'u',  'v',  'w',
-     'x',  'y',  'z',  '{',  '|',  '}',  '~',  '<',
-     '<',  '=',  '>',  '#',  '#',  '.',  '#',  '#',
-     '#',  '#',  ' ',  '#',  ' ',  '>',  '.',  '.',
-     '[',  ']',  '0',  '1',  '2',  '3',  '4',  '5',
-     '6',  '7',  '8',  '9',  '.',  '<',  '=',  '>',
-     ' ',  '!',  '"',  '#',  '$',  '%',  '&',  '\'',
-     '(',  ')',  '*',  '+',  ',',  '-',  '.',  '/',
-     '0',  '1',  '2',  '3',  '4',  '5',  '6',  '7',
-     '8',  '9',  ':',  ';',  '<',  '=',  '>',  '?',
-     '@',  'A',  'B',  'C',  'D',  'E',  'F',  'G',
-     'H',  'I',  'J',  'K',  'L',  'M',  'N',  'O',
-     'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',
-     'X',  'Y',  'Z',  '[',  '\\', ']',  '^',  '_',
-     '`',  'a',  'b',  'c',  'd',  'e',  'f',  'g',
-     'h',  'i',  'j',  'k',  'l',  'm',  'n',  'o',
-     'p',  'q',  'r',  's',  't',  'u',  'v',  'w',
-     'x',  'y',  'z',  '{',  '|',  '}',  '~',  '<'
+     "\0", "#",  "#",  "#",  "#",  ".",  "#",  "#",
+     "#",  "\t", "\n", "#",  " ",  "\r", ".",  ".",
+     "[",  "]",  "0",  "1",  "2",  "3",  "4",  "5",
+     "6",  "7",  "8",  "9",  ".",  "<",  "=",  ">",
+     " ",  "!",  '"',  "#",  "$",  "%",  "&",  "'",
+     "(",  ")",  "*",  "+",  ",",  "-",  ".",  "/",
+     "0",  "1",  "2",  "3",  "4",  "5",  "6",  "7",
+     "8",  "9",  ":",  ";",  "<",  "=",  ">",  "?",
+     "@",  "A",  "B",  "C",  "D",  "E",  "F",  "G",
+     "H",  "I",  "J",  "K",  "L",  "M",  "N",  "O",
+     "P",  "Q",  "R",  "S",  "T",  "U",  "V",  "W",
+     "X",  "Y",  "Z",  "[",  "\\", "]",  "^",  "_",
+     "`",  "a",  "b",  "c",  "d",  "e",  "f",  "g",
+     "h",  "i",  "j",  "k",  "l",  "m",  "n",  "o",
+     "p",  "q",  "r",  "s",  "t",  "u",  "v",  "w",
+     "x",  "y",  "z",  "{",  "|",  "}",  "~",  "<",
+     "<",  "=",  ">",  "#",  "#",  ".",  "#",  "#",
+     "#",  "#",  " ",  "#",  " ",  ">",  ".",  ".",
+     "[",  "]",  "0",  "1",  "2",  "3",  "4",  "5",
+     "6",  "7",  "8",  "9",  ".",  "<",  "=",  ">",
+     " ",  "!",  '"',  "#",  "$",  "%",  "&",  "'",
+     "(",  ")",  "*",  "+",  ",",  "-",  ".",  "/",
+     "0",  "1",  "2",  "3",  "4",  "5",  "6",  "7",
+     "8",  "9",  ":",  ";",  "<",  "=",  ">",  "?",
+     "@",  "A",  "B",  "C",  "D",  "E",  "F",  "G",
+     "H",  "I",  "J",  "K",  "L",  "M",  "N",  "O",
+     "P",  "Q",  "R",  "S",  "T",  "U",  "V",  "W",
+     "X",  "Y",  "Z",  "[",  "\\", "]",  "^",  "_",
+     "`",  "a",  "b",  "c",  "d",  "e",  "f",  "g",
+     "h",  "i",  "j",  "k",  "l",  "m",  "n",  "o",
+     "p",  "q",  "r",  "s",  "t",  "u",  "v",  "w",
+     "x",  "y",  "z",  "{",  "|",  "}",  "~",  "<"
     ];
 
 const qfontUnicodeTable: string[] = [
-    " ", " ", "\u2014"," ", "_", "\u2747", "\u2020",
+    " ", " ", "\u2014", " ", "_", "\u2747", "\u2020",
     "\u00b7", "\ud83d\udd2b", " ", " ", "\u25a0",
     "\u2022", "\u2192", "\u2748", "\u2748", "[", "]",
     "\ud83d\udc7d", "\ud83d\ude03", "\ud83d\ude1e",
@@ -87,13 +88,12 @@ const enum DPTextParserState {
 const digitRe = /^\d$/;
 const hexDigitRe = /^[\dA-F]$/i;
 
-
 class DPTextParser {
 
-    hex: number;
-    buffer: string;
-    decoding: string;
-    state: DPTextParserState
+    private hex: number;
+    private buffer: string;
+    private decoding: string;
+    private state: DPTextParserState;
 
     constructor() {
         this.hex = 0;
@@ -102,18 +102,18 @@ class DPTextParser {
         this.state = DPTextParserState.Initial;
     }
 
-    write(data: string) {
+    public write(data: string) {
         this.buffer += data;
     }
 
-    next(): string | number | null {
+    public next(): string | number | null {
         if (this.buffer.length <= 0) {
             return null;
         }
 
-        if (this.state == DPTextParserState.Initial && this.buffer[0] != '^') {
+        if (this.state === DPTextParserState.Initial && this.buffer[0] !== "^") {
             let i = 0;
-            while (i < this.buffer.length && this.buffer[i] != '^') {
+            while (i < this.buffer.length && this.buffer[i] !== "^") {
                 i++;
             }
             const res = this.buffer.slice(0, i);
@@ -122,10 +122,10 @@ class DPTextParser {
         }
 
         while (this.buffer.length > 0) {
-            switch(this.state) {
+            switch (this.state) {
                 case DPTextParserState.Initial:
-                    if (this.buffer[0] === '^') {
-                        this.decoding += '^';
+                    if (this.buffer[0] === "^") {
+                        this.decoding += "^";
                         this.buffer = this.buffer.slice(1);
                         this.state = DPTextParserState.Caret;
                     } else {
@@ -135,12 +135,12 @@ class DPTextParser {
                     }
                     break;
                 case DPTextParserState.Caret:
-                    if (this.buffer[0] == '^') {
+                    if (this.buffer[0] === "^") {
                         this.state = DPTextParserState.Initial;
                         this.decoding = "";
                         this.buffer = this.buffer.slice(1);
-                        return '^';
-                    } else if (this.buffer[0] == 'x') {
+                        return "^";
+                    } else if (this.buffer[0] === "x") {
                         this.state = DPTextParserState.Hex0;
                         this.decoding += this.buffer[0];
                         this.buffer = this.buffer.slice(1);
@@ -185,7 +185,7 @@ class DPTextParser {
         return null;
     }
 
-    end(): string {
+    public end(): string {
         const res = this.decoding;
         this.decoding = "";
         return res;
@@ -205,16 +205,15 @@ function decodeQChars(str: string, qtable: string[] = qfontUnicodeTable): string
     return out.join("");
 }
 
-
 function dpcolorStyle(color: number): string {
     let r = ((color >> 8) & 0xf).toString(16);
     let g = ((color >> 4) & 0xf).toString(16);
     let b = (color & 0xf).toString(16);
-    return '#' + r + r + g + g + b + b;
+    return "#" + r + r + g + g + b + b;
 }
 
 export function dptextDOM(str: string, defaultColor: number = 0xfff): HTMLSpanElement {
-    let baseElem = document.createElement('span');
+    let baseElem = document.createElement("span");
     let elem = baseElem;
     let prevColor = defaultColor;
     let parser = new DPTextParser();
@@ -224,9 +223,9 @@ export function dptextDOM(str: string, defaultColor: number = 0xfff): HTMLSpanEl
     for (;;) {
         token = parser.next();
         if (typeof token === "string") {
-            if (color != prevColor) {
-                let newElem = document.createElement('span');
-                if (color != defaultColor) {
+            if (color !== prevColor) {
+                let newElem = document.createElement("span");
+                if (color !== defaultColor) {
                     newElem.style.color = dpcolorStyle(color);
                 }
                 baseElem.appendChild(newElem);

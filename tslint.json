@@ -15,7 +15,7 @@
         "no-eval": true,
         "eofline": true,
         "indent": [true, "spaces", 4],
-        "no-null-keyword": true,
+        "no-null-keyword": false,
         "encoding": true,
         "no-namespace": true,
         "max-classes-per-file": [false],

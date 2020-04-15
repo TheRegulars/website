@@ -1,26 +1,25 @@
-import { dptextDOM } from "./dptext"
-import { LitElement, html, css, customElement, property } from 'lit-element';
-
+import { css, customElement, html, LitElement, property } from "lit-element";
+import { dptextDOM } from "./dptext";
 
 abstract class FetchComponent extends LitElement {
-    @property({type: String}) url: string = '';
-    @property({type: Number}) reloadInterval: number = -1;
-    private timerId: number | null = null;
     static get observedAttributes() {
-        return ['data-url', 'reload-interval'];
+        return ["data-url", "reload-interval"];
     }
+    private timerId: number | null = null;
+    @property({type: String}) public url: string = "";
+    @property({type: Number}) public reloadInterval: number = -1;
 
-    attributeChangedCallback(name: string, oldValue: string, newValue: string) {
+    public attributeChangedCallback(name: string, oldValue: string, newValue: string) {
         if (name === "data-url") {
             this.url = newValue;
-        } else if (name === 'reload-interval') {
+        } else if (name === "reload-interval") {
             this.reloadInterval = parseInt(newValue, 10);
         } else {
             super.attributeChangedCallback(name, oldValue, newValue);
         }
     }
 
-    fetchUrl(): Promise<Object> {
+    public fetchUrl(): Promise<object> {
         return fetch(this.url).then((resp) => {
             if (!resp.ok) {
                 throw Error(resp.statusText);
@@ -31,25 +30,25 @@ abstract class FetchComponent extends LitElement {
         });
     }
 
-    enableAutoRefresh() {
+    public enableAutoRefresh() {
         if (this.reloadInterval > 0) {
             this.timerId = setInterval(this.reloadData.bind(this), this.reloadInterval * 1000);
         }
     }
 
-    disableAutoRefresh() {
+    public disableAutoRefresh() {
         if (this.timerId !== null) {
             clearInterval(this.timerId);
         }
     }
 
-    abstract loadData(): void;
+    public abstract loadData(): void;
 
-    reloadData() {
+    public reloadData() {
         this.loadData();
     }
 
-    connectedCallback() {
+    public connectedCallback() {
         super.connectedCallback();
         if (this.url) {
             this.loadData();
@@ -57,85 +56,20 @@ abstract class FetchComponent extends LitElement {
         }
     }
 
-    disconnectedCallback() {
+    public disconnectedCallback() {
         super.disconnectedCallback();
         this.disableAutoRefresh();
     }
 
 }
 
-@customElement('xon-records')
+@customElement("xon-records")
 export class RecordsComponent extends FetchComponent {
-
-    static pageRegexp = /^#?page-(\d+)$/i;
-
-    @property({type: Boolean}) loaded = false;
-    @property({type: Array}) records = [];
-    @property({type: Number}) pageBy = 50;
-    @property({type: Number}) currentPage = 1;
-    private hashChangeHandler = null;
-
-    constructor() {
-        super();
-        this.setCurrentPage();
-    }
-
-    setCurrentPage() {
-        const match = RecordsComponent.pageRegexp.exec(window.location.hash);
-        if (match !== null) {
-            const page = parseInt(match[1], 10);
-            if (!Number.isNaN(page) && page > 0) {
-                if (!this.loaded || page <= this.pages) {
-                    this.currentPage = page;
-                } else {
-                    this.currentPage = this.pages;
-                }
-            }
-        }
-    }
-
-    changePage(page: number) {
-        this.currentPage = page;
-        const newUrl = document.location.pathname + `#page-${page}`;
-        window.history.pushState(window.history.state, document.title, newUrl)
-    }
-
-    connectedCallback() {
-        super.connectedCallback();
-        this.hashChangeHandler = this.hashChange.bind(this);
-        window.addEventListener("hashchange", this.hashChangeHandler);
-    }
-
-    disconnectedCallback() {
-        super.disconnectedCallback();
-        window.removeEventListener('hashchange', this.hashChangeHandler);
-    }
-
-    hashChange(event: HashChangeEvent) {
-        this.setCurrentPage();
-    }
-
-    loadData() {
-        this.fetchUrl().then((data) => {
-            this.loaded = true;
-            this.records = Object.keys(data).sort().map((mapname) => {
-                const record = data[mapname];
-                return {
-                    map: mapname,
-                    player: record.name,
-                    value: record.val
-                };
-            });
-            if (this.currentPage > this.pages) {
-                this.changePage(this.pages);
-            }
-        });
-    }
 
     static get styles() {
         return css`
             @font-face{
-                font-family: 'Xolonium';
+                font-family: "Xolonium";
                 src:
                     url('fonts/xolonium-regular.woff2') format('woff2'),
                     url('fonts/xolonium-regular.woff') format('woff');
@@ -256,7 +190,72 @@ export class RecordsComponent extends FetchComponent {
         return Math.ceil(this.records.length / this.pageBy);
     }
 
-    listRecords(page: number) {
+    public static pageRegexp = /^#?page-(\d+)$/i;
+    private hashChangeHandler = null;
+
+    @property({type: Boolean}) public loaded = false;
+    @property({type: Array}) public records = [];
+    @property({type: Number}) public pageBy = 50;
+    @property({type: Number}) public currentPage = 1;
+
+    constructor() {
+        super();
+        this.setCurrentPage();
+    }
+
+    public setCurrentPage() {
+        const match = RecordsComponent.pageRegexp.exec(window.location.hash);
+        if (match !== null) {
+            const page = parseInt(match[1], 10);
+            if (!Number.isNaN(page) && page > 0) {
+                if (!this.loaded || page <= this.pages) {
+                    this.currentPage = page;
+                } else {
+                    this.currentPage = this.pages;
+                }
+            }
+        }
+    }
+
+    public changePage(page: number) {
+        this.currentPage = page;
+        const newUrl = document.location.pathname + `#page-${page}`;
+        window.history.pushState(window.history.state, document.title, newUrl);
+    }
+
+    public connectedCallback() {
+        super.connectedCallback();
+        this.hashChangeHandler = this.hashChange.bind(this);
+        window.addEventListener("hashchange", this.hashChangeHandler);
+    }
+
+    public disconnectedCallback() {
+        super.disconnectedCallback();
+        window.removeEventListener("hashchange", this.hashChangeHandler);
+    }
+
+    public hashChange(event: HashChangeEvent) {
+        this.setCurrentPage();
+    }
+
+    public loadData() {
+        this.fetchUrl().then((data) => {
+            this.loaded = true;
+            this.records = Object.keys(data).sort().map((mapname) => {
+                const record = data[mapname];
+                return {
+                    map: mapname,
+                    player: record.name,
+                    value: record.val
+                };
+            });
+            if (this.currentPage > this.pages) {
+                this.changePage(this.pages);
+            }
+        });
+    }
+
+    public listRecords(page: number) {
         if (!this.loaded || page > this.pages || page < 1) {
             return [];
         }
@@ -265,8 +264,8 @@ export class RecordsComponent extends FetchComponent {
         return this.records.slice(start, end);
     }
 
-    clickPage(event: MouseEvent) {
-        const newPage = parseInt(event.target.getAttribute('switch-page'), 10);
+    public clickPage(event: MouseEvent) {
+        const newPage = parseInt(event.target.getAttribute("switch-page"), 10);
         if (!Number.isNaN(newPage) && newPage >= 1 && newPage <= this.pages) {
             this.changePage(newPage);
         }
@@ -274,7 +273,7 @@ export class RecordsComponent extends FetchComponent {
         return false;
     }
 
-    renderPagination() {
+    public renderPagination() {
         const pages = this.pages;
         if (pages <= 1) {
             return html``;
@@ -283,7 +282,7 @@ export class RecordsComponent extends FetchComponent {
         for (let i = 1; i <= pages; i++) {
             pagesList.push({
                 page: i,
-                active: i == this.currentPage
+                active: i === this.currentPage
             });
         }
         const eventHandler = this.clickPage.bind(this);
@@ -310,7 +309,7 @@ export class RecordsComponent extends FetchComponent {
         `;
     }
 
-    render() {
+    public render() {
         if (!this.loaded) {
             return html`<span>Loading records...</span>`;
         } else {
@@ -343,32 +342,32 @@ export class RecordsComponent extends FetchComponent {
             </table>
             ${this.renderPagination()}
             </div>
-            `
+            `;
         }
     }
 }
 
-@customElement('xon-status')
+@customElement("xon-status")
 export class StatusComponents extends FetchComponent {
 
-    loadData() {
+    public loadData() {
     }
 
-    render() {
+    public render() {
         return html`<p>Status</p>`;
     }
 }
 
 class TemplateRouter {
 
-    contentContainer: HTMLElement | null = null;
-    initialized: boolean = false;
-    routes: {[key: string]: HtmlTemplateElement} = {};
-    activeLinks: HtmlLinkElement = [];
-    attachedLinks: HtmlLinkElement = [];
+    public contentContainer: HTMLElement | null = null;
+    public initialized: boolean = false;
+    public routes: {[key: string]: HtmlTemplateElement} = {};
+    public activeLinks: HtmlLinkElement = [];
+    public attachedLinks: HtmlLinkElement = [];
 
-    loadRoutes() {
-        document.querySelectorAll('template[page-url]').forEach((template) => {
+    public loadRoutes() {
+        document.querySelectorAll("template[page-url]").forEach((template) => {
             const url = template.getAttribute("page-url");
             if (!url) {
                 return;
@@ -377,33 +376,33 @@ class TemplateRouter {
         });
     }
 
-    changeRoute(path: string, pushHistory: boolean) {
+    public changeRoute(path: string, pushHistory: boolean) {
         const template = this.routes[path];
         if (template === undefined || this.contentContainer === null) {
             return;
         }
-        const title = template.getAttribute('title');
-        this.contentContainer.innerHTML = '';
+        const title = template.getAttribute("title");
+        this.contentContainer.innerHTML = "";
         this.contentContainer.appendChild(document.importNode(template.content, true));
         this.activeLinks.forEach((link) => {
             link.classList.remove("active");
         });
         this.activeLinks = [];
         this.attachedLinks.forEach((link) => {
-            if (link.pathname == path) {
+            if (link.pathname === path) {
                 link.classList.add("active");
                 this.activeLinks.push(link);
             }
         });
         if (pushHistory) {
-            window.history.pushState({path: path}, title, path);
+            window.history.pushState({path}, title, path);
         } else {
-            window.history.replaceState({path: path}, title);
+            window.history.replaceState({path}, title);
         }
         document.title = title;
     }
 
-    popstateHandler(event: PopStateEvent) {
+    public popstateHandler(event: PopStateEvent) {
         const eventState = event.state;
         if (!eventState || eventState.path === undefined) {
             return;
@@ -411,8 +410,8 @@ class TemplateRouter {
         this.changeRoute(eventState.path, false);
     }
 
-    clickHandler(event: MouseEvent) {
-        if (event.target.tagName !== 'A') {
+    public clickHandler(event: MouseEvent) {
+        if (event.target.tagName !== "A") {
             return true;
         }
         const elem: HtmlLinkElement = event.target;
@@ -424,9 +423,9 @@ class TemplateRouter {
         return true;
     }
 
-    bindLinks() {
-        document.querySelectorAll('a[router]').forEach((link) => {
-            link.addEventListener('click', this.clickHandler.bind(this));
+    public bindLinks() {
+        document.querySelectorAll("a[router]").forEach((link) => {
+            link.addEventListener("click", this.clickHandler.bind(this));
             if (link.classList.contains("active")) {
                 this.activeLinks.push(link);
             }
@@ -434,25 +433,24 @@ class TemplateRouter {
         });
     }
 
-    documentReady() {
+    public documentReady() {
         if (!this.initialized) {
             this.loadRoutes();
             this.bindLinks();
-            window.addEventListener('popstate', this.popstateHandler.bind(this));
-            this.contentContainer = document.querySelector('[content-container]');
+            window.addEventListener("popstate", this.popstateHandler.bind(this));
+            this.contentContainer = document.querySelector("[content-container]");
             this.changeRoute(window.location.pathname, false);
             this.initialized = true;
         }
     }
 }
 
-
 function documentReady() {
     let router = new TemplateRouter();
     router.documentReady();
 }
 
-document.addEventListener('DOMcontentLoaded', documentReady);
+document.addEventListener("DOMcontentLoaded", documentReady);
 if (document.readyState !== "loading") {
     documentReady();
 }
