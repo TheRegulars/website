@@ -445,8 +445,17 @@ class TemplateRouter {
     }
 }
 
+function loadFonts() {
+    let link = document.createElement("link");
+    link.type = "text/css";
+    link.rel = "stylesheet";
+    link.href = "https://fonts.googleapis.com/css2?family=PT+Mono&family=PT+Serif:ital,wght@0,400;0,700;1,400;1,700&display=swap";
+    document.head.appendChild(link);
+}
+
 function documentReady() {
     let router = new TemplateRouter();
+    loadFonts();
     router.documentReady();
 }
 
