@@ -2,9 +2,85 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>Main</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="keywords" content="xonotic regulars nexuiz fps game quake instagib ctf hook">
+        <meta name="description" content="The Regulars – Instagib CTF Xonotic comunity">
+        <link rel="icon" type="image/x-ico" href="favicon.ico">
+        <link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png">
+        <link rel="icon" type="image/png" sizes="192x192" href="images/favicon-192x192.png">
+        <base href="/">
+        <title>Welcome to The Regulars</title>
     </head>
     <body>
-        Coming soon...
+        <header>
+            <img id="logo" src="images/logo.png">
+            <nav>
+                <a href="/" router>About</a>
+                <a href="/servers/" router>Servers</a>
+                <a href="/records/" router>CTF Records</a>
+            </nav>
+        </header>
+        <main content-container>
+            <template page-url="/" title="About TheRegulars">
+                <p>
+                    Hi and welcome to our small <a href="http://xonotic.org/">Xonotic</a> comunity. If you are first time
+                    here, The Regulars is small Xontic community that known mostly as <a href="https://github.com/xonotic/xonotic/wiki/InstaGib">Instagib</a> 
+                    <abbr title="Capture The Flag">CTF</abbr> players, although many our members play other
+                    <abbr title="Xonotic">xon</abbr> modes as well. If you have no idea what is it, then check this
+                    <a href="https://www.youtube.com/watch?v=vaB3Vq_AJa4">video</a>.
+                </p>
+                <p>
+                    Currently we are hosting 3 Xonotic servers:
+                    <a href="http://stats.xonotic.org/server/436">TheRegulars Instagib</a> also known among other players
+                    as regulars public (because of pub.regulars.win domain) which is our main server,
+                    <a href="http://stats.xonotic.org/server/6037">TheRegulars Votable</a> which is our server we go to
+                    play other modes or 1v1 and <a href="http://stats.xonotic.org/server/4171">TheRegulars Mars</a> which
+                    is a hidden server that we use for private games, aside from this it's almost same as votable server.
+                    All server configurations available under this <a href="https://regulars.win/configs">link</a>.
+                </p>
+
+                <h2>Contacts</h2>
+                <ul>
+                    <li>
+                        IRC: irc.quakenet.org #theregulars (also you can try a <a href="https://regulars.win/chat">quakenet webchat</a>)
+                    </li>
+                    <li>Discord: <a href="https://regulars.win/discord">invite link</a> </li>
+                    <li>
+                        Youtube: <a href="https://www.youtube.com/channel/UCKnREqBN0kCt3ryMvE6brPw">TheRegulars</a>
+                        (mostly videos from <a href="https://regulars.challonge.com/">tournaments</a>)
+                    </li>
+                    <li>Mumble: <a href="mumble://mumble.regulars.win:64738/">mumble.regulars.win:64738</a></li>
+                    <li>Github: <a href="https://github.com/TheRegulars/">TheRegulars</a></li>
+                </ul>
+                
+                <!--
+
+                <h2>Server Rules</h2>
+                -->
+            </template>
+            <template page-url="/servers/" title="TheRegulars Servers">
+            </template>
+            <template page-url="/records/" title="CTF Capture Time Records – TheRegulars">
+                <p>
+                    This is aggregated (across all servers) <abbr title="Time taken to take a flag from one base to another (make a capture)">capture</abbr>
+                    time records. To make into this table you need to beat any record from here at any Regulars servers
+                    (<a href="http://stats.xonotic.org/server/436">pub</a>,
+                    <a href="http://stats.xonotic.org/server/6037">votable</a> or <a href="http://stats.xonotic.org/server/4171">mars</a>).
+                </p>
+                <xon-records data-url="https://api.regulars.win/records" reload-interval="1800">
+                </xon-records>
+            </template>
+            Please wait, page is loading...
+
+        <!--
+        <xon-status>
+        </xon-status>
+        -->
+        </main>
+        <footer>
+            © 2020 The Regulars, site sources available
+            <a href="https://github.com/TheRegulars/website">here</a> under
+            <a href="https://opensource.org/licenses/MIT">MIT license</a>.
+        </footer>
     </body>
 </html>

@@ -192,75 +192,17 @@ class DPTextParser {
     }
 }
 
-
-// taken from closure library
-// https://github.com/google/closure-library/blob/master/closure/goog/crypt/crypt.js#L109
-function stringToUtf8ByteArray(str: string): number[] {
-  let out = [], p = 0;
-  for (let i = 0; i < str.length; i++) {
-    let c = str.charCodeAt(i);
-    if (c < 128) {
-      out[p++] = c;
-    } else if (c < 2048) {
-      out[p++] = (c >> 6) | 192;
-      out[p++] = (c & 63) | 128;
-    } else if (
-        ((c & 0xFC00) == 0xD800) && (i + 1) < str.length &&
-        ((str.charCodeAt(i + 1) & 0xFC00) == 0xDC00)) {
-      // Surrogate Pair
-      c = 0x10000 + ((c & 0x03FF) << 10) + (str.charCodeAt(++i) & 0x03FF);
-      out[p++] = (c >> 18) | 240;
-      out[p++] = ((c >> 12) & 63) | 128;
-      out[p++] = ((c >> 6) & 63) | 128;
-      out[p++] = (c & 63) | 128;
-    } else {
-      out[p++] = (c >> 12) | 224;
-      out[p++] = ((c >> 6) & 63) | 128;
-      out[p++] = (c & 63) | 128;
-    }
-  }
-  return out;
-};
-
-// https://github.com/google/closure-library/blob/master/closure/goog/crypt/crypt.js#L143
-function utf8ByteArrayToString(bytes: number[]): string {
-  let out = [], pos = 0, c = 0;
-  while (pos < bytes.length) {
-    let c1 = bytes[pos++];
-    if (c1 < 128) {
-      out[c++] = String.fromCharCode(c1);
-    } else if (c1 > 191 && c1 < 224) {
-      let c2 = bytes[pos++];
-      out[c++] = String.fromCharCode((c1 & 31) << 6 | c2 & 63);
-    } else if (c1 > 239 && c1 < 365) {
-      // Surrogate Pair
-      let c2 = bytes[pos++];
-      let c3 = bytes[pos++];
-      let c4 = bytes[pos++];
-      let u = ((c1 & 7) << 18 | (c2 & 63) << 12 | (c3 & 63) << 6 | c4 & 63) -
-          0x10000;
-      out[c++] = String.fromCharCode(0xD800 + (u >> 10));
-      out[c++] = String.fromCharCode(0xDC00 + (u & 1023));
-    } else {
-      let c2 = bytes[pos++];
-      let c3 = bytes[pos++];
-      out[c++] =
-          String.fromCharCode((c1 & 15) << 12 | (c2 & 63) << 6 | c3 & 63);
-    }
-  }
-  return out.join('');
-};
-
-// TODO: improve this
 function decodeQChars(str: string, qtable: string[] = qfontUnicodeTable): string {
-    let bytes = stringToUtf8ByteArray(str);
-    return utf8ByteArrayToString(bytes.map((s) => {
-        if (0xe000 <= s && s <= 0xe0ff) {
-            return stringToUtf8ByteArray(qtable[s - 0xe000])[0];
+    let out = [];
+    for (let i = 0; i < str.length; i++) {
+        const code = str.charCodeAt(i);
+        if (0xe000 <= code && code <= 0xe0ff) {
+            out.push(qtable[code - 0xe000]);
         } else {
-            return s
+            out.push(str.charAt(i));
         }
-    }));
+    }
+    return out.join("");
 }
 
 
@@ -271,8 +213,7 @@ function dpcolorStyle(color: number): string {
     return '#' + r + r + g + g + b + b;
 }
 
-
-function dptextDOM(str: string, defaultColor: number = 0xfff): HTMLSpanElement {
+export function dptextDOM(str: string, defaultColor: number = 0xfff): HTMLSpanElement {
     let baseElem = document.createElement('span');
     let elem = baseElem;
     let prevColor = defaultColor;
@@ -307,6 +248,7 @@ function dptextDOM(str: string, defaultColor: number = 0xfff): HTMLSpanElement {
     return baseElem;
 }
 
+/*
 //let testText = "Abc^1^2again^xFFFand^xfff";
 let testText = "Abc^1^2again^xFFFand^xfff^xabchere";
 let parser = new DPTextParser();
@@ -321,6 +263,7 @@ console.log(parser.next());
 console.log(parser.next());
 console.log(parser.next());
 */
+/*
 for (;;) {
     let res = parser.next();
     if (res != null) {
@@ -341,3 +284,4 @@ document.addEventListener('DOMContentLoaded', function() {
     //document.body.innerHTML = 'test';
     console.log("done");
 })
+*/
