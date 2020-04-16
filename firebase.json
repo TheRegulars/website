@@ -1,0 +1,46 @@
+{
+  "hosting": {
+    "public": "dist",
+    "rewrites": [{
+        "source": "/",
+        "destination": "/index.html"
+    }, {
+        "source": "/records/",
+        "destination": "/index.html"
+    }, {
+        "source": "/servers/",
+        "destination": "/index.html"
+    }],
+    "headers": [{
+        "source": "**/*.@(eot|otf|ttf|ttc|woff|woff2)",
+        "headers": [{
+            "key": "Cache-Control",
+            "value": "max-age=86400"
+        }]
+    }, {
+        "source": "**/*.@(css|js)",
+        "headers": [{
+            "key": "Cache-Control",
+            "value": "max-age=2592000"
+        }]
+    }],
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "redirects": [{
+        "source": "/chat",
+        "destination": "http://webchat.quakenet.org/?channels=#theregulars",
+        "type": 301
+    },{
+        "source": "/discord",
+        "destination": "https://discord.gg/6jxvuSe",
+        "type": 301
+    }, {
+        "source": "/configs",
+        "destination": "https://github.com/bacher09/regulars-configs",
+        "type": 302
+    }]
+  }
+}
