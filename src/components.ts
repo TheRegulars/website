@@ -146,13 +146,33 @@ export class RecordsComponent extends FetchComponent {
                 font-size: 0.76em;
             }
 
-            .pagination button:hover {
-                background-color: #00efb2;
+            .pagination li:first-child button {
+                border-top-left-radius: 0.25rem;
+                border-bottom-left-radius: 0.25rem;
             }
 
-            .pagination button:focus {
-                box-shadow: 0 0 0 0.2rem rgba(55, 90, 127, 0.25);
-                outline: 0;
+            .pagination li:last-child button {
+                border-top-right-radius: 0.25rem;
+                border-bottom-right-radius: 0.25rem;
+            }
+
+            @media (hover: hover) {
+                .pagination button:hover {
+                    background-color: #00efb2;
+                }
+
+                .pagination button:focus {
+                    box-shadow: 0 0 0 0.2rem rgba(55, 90, 127, 0.25);
+                    outline: 0;
+                }
+            }
+
+            @media (hover: none) {
+                .pagination button:ative {
+                    background-color: #00efb2;
+                    box-shadow: 0 0 0 0.2rem rgba(55, 90, 127, 0.25);
+                    outline: 0;
+                }
             }
 
             .pagination .active button {

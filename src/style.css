@@ -110,3 +110,12 @@ h1, h2, h3, h4, h5, h6 {
     margin-bottom: 0.6rem;
     line-height: 1.2;
 }
+
+@media screen and (max-width: 550px) {
+    nav {
+        margin-top: 15px;
+    }
+    main {
+        margin: 15px auto;
+    }
+}
