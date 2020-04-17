@@ -35,7 +35,7 @@ module.exports = {
             { from: 'static/favicon.ico', to: 'favicon.ico'},
             { from: 'static/favicon-192x192.png', to: 'images/favicon-192x192.png'},
             { from: 'static/apple-touch-icon.png', to: 'images/apple-touch-icon.png'},
-            { from: 'static/images/logo.png', to: 'images/logo.png'},
+            { from: 'static/images/', to: 'images/'},
             { from: 'static/fonts/', to: 'fonts/'}
         ]),
         new HtmlWebpackPlugin({
