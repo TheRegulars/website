@@ -121,6 +121,28 @@ func servers(w http.ResponseWriter, r *http.Request) {
 	w.Write(json)
 }
 
+func server(w http.ResponseWriter, r *http.Request) {
+	conf := getConfig()
+	serverName := strings.TrimPrefix(r.URL.Path, "/servers/")
+	serverConf, ok := conf.Servers[serverName]
+	if !ok {
+		http.Error(w, "Server not found", http.StatusNotFound)
+		return
+	}
+	status, err := QueryRconServer(serverConf, time.Millisecond*1000, 3)
+	if err != nil {
+		http.Error(w, "Can't load data from server", http.StatusInternalServerError)
+		return
+	}
+	json, err := json.Marshal(status)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(json)
+}
+
 func exporters(w http.ResponseWriter, r *http.Request) {
 	var servers []string
 
@@ -285,6 +307,7 @@ func main() {
 	http.HandleFunc("/healthz", healthz)
 	http.HandleFunc("/records", records)
 	http.HandleFunc("/servers", servers)
+	http.HandleFunc("/servers/", server)
 	http.HandleFunc("/exporters", exporters)
 	http.HandleFunc("/metrics", metrics)
 	http.HandleFunc("/maps", maps)

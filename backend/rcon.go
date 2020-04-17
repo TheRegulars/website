@@ -437,6 +437,22 @@ func QueryRconMemstats(server *ServerConfig, deadline time.Time) (*ServerMemstat
 	}
 }
 
+func QueryRconServer(conf ServerConfig, timeout time.Duration, retries int) (*ServerStatus, error) {
+	var status *ServerStatus
+	var err error
+
+	for i := 0; i < retries; i++ {
+		deadline := time.Now().Add(timeout)
+		status, err = QueryRconStatus(&conf, deadline)
+		if err == nil {
+			return status, nil
+		}
+		log.Printf("rcon error: %v", err)
+	}
+
+	return status, err
+}
+
 func QueryRconServers(servers map[string]ServerConfig, timeout time.Duration, retries int) map[string]*ServerStatus {
 	var mux sync.Mutex
 	var wg sync.WaitGroup
