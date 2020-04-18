@@ -68,15 +68,15 @@ export class RecordsComponent extends FetchComponent {
 
     static get styles() {
         return css`
-            .col-map {
+            col.col-map {
                 width: 40%;
             }
 
-            .col-record {
+            col.col-record {
                 width: 10%
             }
 
-            .col-nick {
+            col.col-nick {
                 width: 50%;
             }
 
@@ -85,6 +85,7 @@ export class RecordsComponent extends FetchComponent {
                 text-align: left;
                 margin-top: 1.2rem 0;
                 border-collapse: collapse;
+                table-layout: fixed;
                 width: 100%;
             }
 
@@ -111,6 +112,17 @@ export class RecordsComponent extends FetchComponent {
                 margin: 1px;
                 vertical-align: top;
                 white-space: nowrap;
+            }
+
+            td.col-nick, td.col-map {
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            td.col-nick {
+                padding-left: 15px;
+            }
+            td.col-record {
+                text-align: center;
             }
 
             .pagination {
@@ -176,18 +188,25 @@ export class RecordsComponent extends FetchComponent {
                 border-color: transparent;
             }
 
-            .td-record {
-                text-align: center;
+            @media screen and (max-width: 650px) {
+                div {
+                    font-size: 0.8em;
+                }
             }
 
             @media screen and (max-width: 550px) {
                 div {
-                    font-size: 0.8rem;
+                    font-size: 0.78em;
                 }
             }
-            @media screen and (max-width: 450px) {
+            @media screen and (max-width: 460px) {
                 div {
-                    font-size: 0.66rem;
+                    font-size: 0.66em;
+                }
+            }
+            @media screen and (max-width: 360px) {
+                div {
+                    font-size: 0.58em;
                 }
             }
         `;
@@ -342,9 +361,9 @@ export class RecordsComponent extends FetchComponent {
             ${this.listRecords(this.currentPage).map((item) => {
                 return html`
                 <tr>
-                    <td>${item.map}</td>
-                    <td class="td-record">${item.value.toFixed(3)}</td>
-                    <td>${dptextDOM(item.player)}</td>
+                    <td class="col-map">${item.map}</td>
+                    <td class="col-record">${item.value.toFixed(3)}</td>
+                    <td class="col-nick">${dptextDOM(item.player)}</td>
                 </tr>
                 `;
             })}
