@@ -179,7 +179,7 @@ LOOP:
 			}
 		case 3:
 			if bytes.HasPrefix(line, []byte(protocolPrefix)) {
-				status.Version = strings.TrimSpace(string(line[len(protocolPrefix):]))
+				status.Protocol = strings.TrimSpace(string(line[len(protocolPrefix):]))
 				parseState = 4
 			} else {
 				return errors.New("Failed to parse protocol")

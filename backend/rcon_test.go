@@ -70,6 +70,14 @@ func TestParseRconStatus(t *testing.T) {
 	if status.PlayersMax != 24 {
 		t.Error("Incorrect max players ", status)
 	}
+
+	if status.Version != "Xonotic build 12:58:11 Oct  6 2019 - (gamename Xonotic)" {
+		t.Error("Incorrect version", status)
+	}
+
+	if status.Protocol != "3504 (DP7)" {
+		t.Error("Incorrect protocol", status)
+	}
 }
 
 func TestParseRconMemstats(t *testing.T) {
