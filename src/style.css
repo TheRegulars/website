@@ -39,6 +39,9 @@ nav > a {
     line-height: 1.5;
     font-weight: 400;
     font-size: 0.9rem;
+    display: inline-block;
+    margin-top: 5px;
+    margin-bottom: 5px;
     transition: color 0.15s ease-in-out,
                 background-color 0.15s ease-in-out,
                 border-color 0.15s ease-in-out,
