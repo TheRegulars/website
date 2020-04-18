@@ -68,17 +68,6 @@ export class RecordsComponent extends FetchComponent {
 
     static get styles() {
         return css`
-            @font-face{
-                font-family: "Xolonium";
-                src:
-                    url('fonts/xolonium-regular.woff2') format('woff2'),
-                    url('fonts/xolonium-regular.woff') format('woff');
-                    url('fonts/xolonium-regular.ttf') format('truetype');
-                    url('fonts/xolonium-regular.eot') format('embedded-opentype');
-                font-weight: normal;
-                font-style: normal;
-            }
-
             .col-map {
                 width: 40%;
             }
@@ -198,7 +187,7 @@ export class RecordsComponent extends FetchComponent {
             }
             @media screen and (max-width: 450px) {
                 div {
-                    font-size: 0.69rem;
+                    font-size: 0.66rem;
                 }
             }
         `;

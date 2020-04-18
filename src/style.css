@@ -144,3 +144,15 @@ h1, h2, h3, h4, h5, h6 {
     }
 }
 
+@font-face {
+    font-family: "Xolonium";
+    src: url('/fonts/xolonium-regular.eot');
+    src:
+        url('/fonts/xolonium-regular.eot?#iefix') format('embedded-opentype'),
+        url('/fonts/xolonium-regular.woff2') format('woff2'),
+        url('/fonts/xolonium-regular.woff') format('woff'),
+        url('/fonts/xolonium-regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
