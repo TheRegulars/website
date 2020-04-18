@@ -111,7 +111,24 @@ h1, h2, h3, h4, h5, h6 {
     line-height: 1.2;
 }
 
+.grafana-iframe {
+    width: 800px;
+    height: 320px;
+}
+
+@media screen and (max-width: 840px) {
+    .grafana-iframe {
+        width: 450px;
+        height: 250px;
+    }
+}
+
 @media screen and (max-width: 550px) {
+    .grafana-iframe {
+        width: 400px;
+        height: 210px
+    }
+
     nav {
         margin-top: 15px;
     }
@@ -119,3 +136,11 @@ h1, h2, h3, h4, h5, h6 {
         margin: 15px auto;
     }
 }
+
+@media screen and (max-width: 450px) {
+    .grafana-iframe {
+        width: 300px;
+        height: 200px
+    }
+}
+
