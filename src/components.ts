@@ -144,6 +144,7 @@ export class RecordsComponent extends FetchComponent {
                 margin-left: 0;
                 padding: 0.5rem 0.75rem;
                 font-size: 0.76em;
+                margin: 0;
             }
 
             .pagination li:first-child button {
