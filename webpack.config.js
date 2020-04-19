@@ -36,7 +36,9 @@ module.exports = {
             { from: 'static/favicon-192x192.png', to: 'images/favicon-192x192.png'},
             { from: 'static/apple-touch-icon.png', to: 'images/apple-touch-icon.png'},
             { from: 'static/images/', to: 'images/'},
-            { from: 'static/fonts/', to: 'fonts/'}
+            { from: 'static/fonts/', to: 'fonts/'},
+            { from: 'static/robots.txt', to: 'robots.txt'},
+            { from: 'static/sitemap.xml', to: 'sitemap.xml'}
         ]),
         new HtmlWebpackPlugin({
             minify: htmlMinifyOpts,
