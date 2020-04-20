@@ -348,7 +348,7 @@ export class RecordsComponent extends LitElement {
                 <tr>
                     <td class="col-map">${item.map}</td>
                     <td class="col-record">${item.value.toFixed(3)}</td>
-                    <td class="col-nick">${dptextDOM(item.player)}</td>
+                    <td class="col-nick"><xon-text text=${item.player}></xon-text></td>
                 </tr>
                 `;
             })}

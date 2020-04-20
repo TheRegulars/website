@@ -1,4 +1,5 @@
 import { TemplateRouter } from "./router";
+import  "./components/xon_text";
 import  "./components/mapshot";
 import  "./components/records";
 import  "./components/xon_status";

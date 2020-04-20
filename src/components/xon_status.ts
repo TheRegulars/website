@@ -1,5 +1,4 @@
 import { css, customElement, html, LitElement, property } from "lit-element";
-import { dptextDOM } from "../dptext";
 
 
 @customElement("xon-status")
@@ -171,7 +170,7 @@ export class StatusComponents extends LitElement {
             visibility: hidden;
         }
 
-        td.col-player > span, td.col-score > span.spectator {
+        td.col-player > xon-text, td.col-score > span.spectator {
             position: absolute;
             left: 0;
             right: 0;
@@ -270,7 +269,7 @@ export class StatusComponents extends LitElement {
                     ${players.map((player) => html`
                     <tr>
                         <td class="col-slot">${player.no}</td>
-                        <td class="col-player">${dptextDOM(player.name)}</td>
+                        <td class="col-player"><xon-text text=${player.name}></xon-text></td>
                         <td class="col-ping">${player.is_bot ?
                             html`<span class="bot">bot</span>`:
                             player.ping}

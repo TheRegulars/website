@@ -6,7 +6,8 @@
   "sideEffects": [
       "./src/components/xon_status.ts",
       "./src/components/records.ts",
-      "./src/components/mapshot.ts"
+      "./src/components/mapshot.ts",
+      "./src/components/xon_text.ts"
   ],
   "devDependencies": {
     "autoprefixer": "^9.7.6",
