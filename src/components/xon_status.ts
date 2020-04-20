@@ -141,7 +141,7 @@ export class StatusComponent extends LitElement {
         const connection = getConnection();
 
         // listen for connection changes
-        if (connection.addEventListener) {
+        if (connection && connection.addEventListener) {
             this._connectionHandler = this.connectionChanged.bind(this);
             connection.addEventListener("change", this._connectionHandler);
         }
@@ -153,7 +153,7 @@ export class StatusComponent extends LitElement {
         }
 
         // enable auto refresh if tab is visible
-        if (this.visible && navigator.onLine === true) {
+        if (this.visible && navigator.onLine !== false) {
             this.enableAutoRefresh();
         }
     }
@@ -247,7 +247,7 @@ export class StatusComponent extends LitElement {
         div.server-info {
             display: flex;
             flex-direction: row;
-            justify-content: center;
+            justify-content: flex-start;
             flex-wrap: wrap;
         }
 
@@ -272,6 +272,10 @@ export class StatusComponent extends LitElement {
             border-spacing: 0.75em 0.075em;
             border-collapse: separate;
             width: 100%;
+        }
+        table.mapinfo {
+            margin-left: auto;
+            margin-right: auto;
         }
         .mapinfo thead {
             text-align: center;
