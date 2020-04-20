@@ -1,67 +1,190 @@
 import { css, customElement, html, LitElement, property } from "lit-element";
 
+function getConnection(): object | undefined {
+    return navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+}
+
 
 @customElement("xon-status")
-export class StatusComponents extends LitElement {
+export class StatusComponent extends LitElement {
+
+    static goodConnectionRefreshInterval: number = 20;
+    static badConnectionRefreshInterval: number = 120;
+    private _connectionHandler = undefined;
+    private _visibilityHandler = undefined;
+    private _loaded = false;
+    private _autorefresh: boolean = true;
+    private _dataUrl: string = "";
+    private _timerId: number | undefined = undefined;
 
     @property({type: Object}) public serverStatus = {};
-    @property({type: Number}) public reloadInterval: number = 20;
     @property({type: String}) public connectHost: string = "";
     @property({type: String}) public xonStatsUrl: string = "";
-    @property({type: Boolean}) public loaded = false;
+
+    @property({type: Object}) public lastRequestedDate;
+    @property({type: Object}) public lastLoadedDate;
+
+    @property({type: Number})
+    public get refreshInterval() {
+        const connection = getConnection();
+
+        if (!connection) {
+            return StatusComponent.goodConnectionRefreshInterval;
+        } else if (connection.saveData || connection.effectiveType === 'slow-2g' ||
+                   connection.effectiveType === '2g' || connection.effectiveType === '3g' ||
+                   connection.downlink < 0.5) {
+            return StatusComponent.badConnectionRefreshInterval;
+        } else {
+            return StatusComponent.goodConnectionRefreshInterval;
+        }
+    }
+
+    @property({type: String})
+    public get dataUrl() {
+        return this._dataUrl;
+    }
+
+    public set dataUrl(value: string) {
+        const oldValue = this.dataUrl;
+        this._dataUrl = value;
+        this.setLoaded(false);
+        if (value) {
+            this.loadData();
+        }
+        this.requestUpdate('dataUrl', oldValue);
+    }
+
+    @property({type: Boolean})
+    public get visible() {
+        if (typeof document.visibilityState !== "undefined") {
+            return document.visibilityState != "hidden";
+        } else {
+            return true;
+        }
+    }
+
+    @property({type: Boolean})
+    public get loaded() {
+        return this._loaded;
+    }
+
+    private setLoaded(val: boolean) {
+        const oldVal = this.loaded;
+        if (oldVal !== val) {
+            this._loaded = val;
+            this.requestUpdate("loaded", oldVal);
+        }
+    }
+
+    @property({type: Boolean})
+    public get autoRefresh() {
+        return this._autorefresh;
+    }
 
     static get observedAttributes() {
-        return super.observedAttributes.concat(["data-url", "reload-interval", 'connect-host', 'xon-stats-url']);
+        return super.observedAttributes.concat(["data-url", "connect-host", "xon-stats-url"]);
     }
 
     public attributeChangedCallback(name: string, oldValue: string, newValue: string) {
         if (name === "data-url") {
-            this.url = newValue;
-        } else if (name === "reload-interval") {
-            this.reloadInterval = parseInt(newValue, 10);
+            this.dataUrl = newValue;
         } else if (name === "connect-host") {
             this.connectHost = newValue;
         } else if (name === "xon-stats-url") {
             this.xonStatsUrl = newValue;
-        } else {
-            super.attributeChangedCallback(name, oldValue, newValue);
         }
+        super.attributeChangedCallback(name, oldValue, newValue);
+    }
+
+    private enableAutoRefresh() {
+        this._autorefresh = true;
+        this._timerId = setInterval(this.reloadData.bind(this), this.refreshInterval * 1000);
+    }
+
+    private disableAutoRefresh() {
+        if (this._timerId !== undefined) {
+            clearInterval(this._timerId);
+        }
+        this._autorefresh = false;
+    }
+    private updateAutoRefresh() {
+        if (!this.visible || navigator.onLine === false) {
+            this.disableAutoRefresh();
+        } else {
+            if (this.autoRefresh) {
+                this.disableAutoRefresh();
+                this.enableAutoRefresh();
+            } else {
+                this.enableAutoRefresh();
+            }
+            if (this.lastRequestedDate) {
+                const currentDate = new Date();
+                const diff = currentDate.getTime() - this.lastRequestedDate.getTime();
+                if (diff > (this.refreshInterval * 1000)) {
+                    // request early update
+                    this.reloadData();
+                }
+            }
+        }
+    }
+    // called when internet connection have changed
+    private connectionChanged(evt) {
+        this.updateAutoRefresh();
+    }
+
+    private visiblityChanged(evt) {
+        this.updateAutoRefresh();
     }
 
     public connectedCallback() {
         super.connectedCallback();
-        if (this.url) {
-            this.loadData();
+        const connection = getConnection();
+
+        // listen for connection changes
+        if (connection.addEventListener) {
+            this._connectionHandler = this.connectionChanged.bind(this);
+            connection.addEventListener("change", this._connectionHandler);
+        }
+
+        // listen for visiblity changes
+        if (typeof document.hidden !== "undefined") {
+            this._visibilityHandler = this.visiblityChanged.bind(this);
+            document.addEventListener("visibilitychange", this._visibilityHandler);
+        }
+
+        // enable auto refresh if tab is visible
+        if (this.visible && navigator.onLine === true) {
             this.enableAutoRefresh();
         }
     }
 
     public disconnectedCallback() {
         super.disconnectedCallback();
+        if (this._connectionHandler) {
+            const connection = getConnection();
+            connection.removeEventListener("change", this._connectionHandler);
+        }
+        if (this._visibilityHandler) {
+            document.removeEventListener("visibilitychange", this._visibilityHandler);
+        }
+        // disable auto refresh if it was enabled
         this.disableAutoRefresh();
     }
 
-    public fetchUrl(): Promise<object> {
-        return fetch(this.url).then((resp) => {
+    public loadData() {
+        this.lastRequestedDate = new Date();
+        fetch(this.dataUrl).then((resp) => {
             if (!resp.ok) {
                 throw Error(resp.statusText);
             }
             return resp.json();
+        }).then((data) => {
+            this.serverStatus = data;
+            this.setLoaded(true);
+            this.lastLoadedDate = new Date();
         }).catch((err) => {
-            console.log(err);
+            console.log("Failed to load data", err);
         });
-    }
-
-    public enableAutoRefresh() {
-        if (this.reloadInterval > 0) {
-            this.timerId = setInterval(this.reloadData.bind(this), this.reloadInterval * 1000);
-        }
-    }
-
-    public disableAutoRefresh() {
-        if (this.timerId !== null) {
-            clearInterval(this.timerId);
-        }
     }
 
     public reloadData() {
@@ -177,6 +300,7 @@ export class StatusComponents extends LitElement {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            line-height: 1em;
         }
         td.col-score > span.frags {
             position: absolute;
@@ -191,8 +315,10 @@ export class StatusComponents extends LitElement {
             white-space: normal;
         }
         .col-slot, .col-ping {
-            width: 8%;
             text-align: right;
+        }
+        .col-slot, .col-pl {
+            width: 6%;
         }
         .col-time {
             width: 15%;
@@ -231,13 +357,6 @@ export class StatusComponents extends LitElement {
             }
         }
         `
-    }
-
-    public loadData() {
-        this.fetchUrl().then((data) => {
-            this.serverStatus = data;
-            this.loaded = true;
-        });
     }
 
     private renderPlayers() {
