@@ -2,7 +2,12 @@
   "name": "regulars-website",
   "version": "1.0.0",
   "description": "The Regulars Website",
-  "main": "src/components.ts",
+  "main": "./src/main.ts",
+  "sideEffects": [
+      "./src/components/xon_status.ts",
+      "./src/components/records.ts",
+      "./src/components/mapshot.ts"
+  ],
   "devDependencies": {
     "autoprefixer": "^9.7.6",
     "clean-webpack-plugin": "^3.0.0",

@@ -22,7 +22,7 @@ var htmlMinifyOpts = {
 
 module.exports = {
     entry: [
-        './src/components.ts',
+        './src/main.ts',
         './src/style.css'
     ],
     output: {
