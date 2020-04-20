@@ -39,6 +39,12 @@ export class MapshotComponent extends LitElement {
         return `${MapshotComponent.mapshotApi}${this.map}.${ext}`;
     }
 
+    private imageLoaded(img: Image, missing: boolean) {
+        img.alt = this.map;
+        this.imgDOM = img;
+        this.loaded = true;
+    }
+
     private loadImage() {
         let pngImg = new Image(); 
         let jpgImg = new Image();
@@ -57,16 +63,13 @@ export class MapshotComponent extends LitElement {
         pngPromise.then((img) => {
             // cancel jpg loading
             jpgImg.src = "";
-            this.imgDOM = img;
-            this.loaded = true;
+            this.imageLoaded(img, false);
             jpgPromise.catch(() => {}); // ignore jpg
         }).catch(() => {
             jpgPromise.then((img) => {
-                this.imgDOM = img;
-                this.loaded = true;
+                this.imageLoaded(img, false);
             }).catch(() => {
-                this.imgDOM = missingImg;
-                this.loaded = true;
+                this.imageLoaded(missingImg, true);
             });
         });
     }
