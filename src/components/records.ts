@@ -5,45 +5,31 @@ import { dptextDOM } from "../dptext";
 @customElement("xon-records")
 export class RecordsComponent extends LitElement {
 
+    private _dataUrl: string = "";
+
     static get observedAttributes() {
-        return super.observedAttributes.concat(["data-url", "reload-interval"]);
+        return super.observedAttributes.concat(["data-url"]);
     }
 
-    private timerId: number | null = null;
-    @property({type: String}) public url: string = "";
-    @property({type: Number}) public reloadInterval: number = -1;
+    @property({type: String})
+    public get dataUrl() {
+        return this._dataUrl;
+    }
+
+    public set dataUrl(value: string) {
+        const oldValue = this.dataUrl;
+        this._dataUrl = value;
+        if (value != oldValue) {
+            this.loadData();
+            this.requestUpdate('dataUrl', oldValue);
+        }
+    }
 
     public attributeChangedCallback(name: string, oldValue: string, newValue: string) {
         if (name === "data-url") {
-            this.url = newValue;
-        } else if (name === "reload-interval") {
-            this.reloadInterval = parseInt(newValue, 10);
-        } else {
-            super.attributeChangedCallback(name, oldValue, newValue);
+            this.dataUrl = newValue;
         }
-    }
-
-    public fetchUrl(): Promise<object> {
-        return fetch(this.url).then((resp) => {
-            if (!resp.ok) {
-                throw Error(resp.statusText);
-            }
-            return resp.json();
-        }).catch((err) => {
-            console.log(err);
-        });
-    }
-
-    public enableAutoRefresh() {
-        if (this.reloadInterval > 0) {
-            this.timerId = setInterval(this.reloadData.bind(this), this.reloadInterval * 1000);
-        }
-    }
-
-    public disableAutoRefresh() {
-        if (this.timerId !== null) {
-            clearInterval(this.timerId);
-        }
+        super.attributeChangedCallback(name, oldValue, newValue);
     }
 
     static get styles() {
@@ -234,10 +220,6 @@ export class RecordsComponent extends LitElement {
 
     public connectedCallback() {
         super.connectedCallback();
-        if (this.url) {
-            this.loadData();
-            this.enableAutoRefresh();
-        }
         this.hashChangeHandler = this.hashChange.bind(this);
         window.addEventListener("hashchange", this.hashChangeHandler);
     }
@@ -245,7 +227,6 @@ export class RecordsComponent extends LitElement {
     public disconnectedCallback() {
         window.removeEventListener("hashchange", this.hashChangeHandler);
         super.disconnectedCallback();
-        this.disableAutoRefresh();
     }
 
     public hashChange(event: HashChangeEvent) {
@@ -253,7 +234,12 @@ export class RecordsComponent extends LitElement {
     }
 
     public loadData() {
-        this.fetchUrl().then((data) => {
+        fetch(this.dataUrl).then((resp) => {
+            if (!resp.ok) {
+                throw Error(resp.statusText);
+            }
+            return resp.json();
+        }).then((data) => {
             this.loaded = true;
             this.records = Object.keys(data).sort().map((mapname) => {
                 const record = data[mapname];
@@ -266,6 +252,8 @@ export class RecordsComponent extends LitElement {
             if (this.currentPage > this.pages) {
                 this.changePage(this.pages);
             }
+        }).catch((err) => {
+            console.log(err);
         });
     }
 
