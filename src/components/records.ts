@@ -1,15 +1,20 @@
 import { css, customElement, html, LitElement, property } from "lit-element";
-import { dptextDOM } from "../dptext";
+import { MapshotComponent } from "./mapshot";
 
 
 @customElement("xon-records")
 export class RecordsComponent extends LitElement {
 
     private _dataUrl: string = "";
+    private _mapshotsCache: {[key: string]: MapshotComponent | undefined} = {};
+    private _tooltipTimeouts: {[key: string]: number | undefined} = {};
+    private _tooltipTapStates: {[key: string]: boolean | undefined} = {};
 
     static get observedAttributes() {
         return super.observedAttributes.concat(["data-url"]);
     }
+
+    static tooltipDelayTime: number = 260;
 
     @property({type: String})
     public get dataUrl() {
@@ -34,6 +39,34 @@ export class RecordsComponent extends LitElement {
 
     static get styles() {
         return css`
+            xon-mapshot {
+                user-select: none;
+                position: absolute;
+                width: 100%;
+                bottom: 100%;
+                left: 50%;
+                margin-left: -50%;
+                pointer-events: none;
+                z-index: 1;
+                animation: mapshot 310ms ease-in none;
+                background-color: #000;
+                border: solid 1.8px #999;
+                border-radius: 5px;
+            }
+
+            @keyframes mapshot {
+                0% {
+                    opacity: 0.1;
+                    transform: scale(0) translate(-50%, 50%);
+                }
+                100% {
+                    opacity: 1;
+                    transform: scale(1) translate(0, 0);
+                }
+            }
+            xon-mapshot[hidden] {
+                display: none;
+            }
             col.col-map {
                 width: 40%;
             }
@@ -74,13 +107,19 @@ export class RecordsComponent extends LitElement {
             }
 
             table td {
-                padding: 1px 5px;
+                padding: 1px 2px 1px 0;
                 margin: 1px;
                 vertical-align: top;
                 white-space: nowrap;
             }
 
-            td.col-nick, td.col-map {
+            td.col-nick {
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            td.col-map > span {
+                display: block;
+                width: 100%;
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
@@ -89,6 +128,10 @@ export class RecordsComponent extends LitElement {
             }
             td.col-record {
                 text-align: center;
+            }
+
+            td.col-map {
+                position: relative;
             }
 
             .pagination {
@@ -154,27 +197,17 @@ export class RecordsComponent extends LitElement {
                 border-color: transparent;
             }
 
-            @media screen and (max-width: 650px) {
-                div {
+            @media screen and (max-width: 550px) {
+                div.record {
                     font-size: 0.8em;
                 }
             }
-
-            @media screen and (max-width: 550px) {
-                div {
-                    font-size: 0.78em;
-                }
-            }
             @media screen and (max-width: 460px) {
-                div {
-                    font-size: 0.66em;
+                div.record {
+                    font-size: 0.72em;
                 }
             }
-            @media screen and (max-width: 360px) {
-                div {
-                    font-size: 0.58em;
-                }
-            }
+
         `;
     }
 
@@ -192,6 +225,7 @@ export class RecordsComponent extends LitElement {
     @property({type: Array}) public records = [];
     @property({type: Number}) public pageBy = 50;
     @property({type: Number}) public currentPage = 1;
+    @property({type: Boolean}) public tooltips = true;
 
     constructor() {
         super();
@@ -275,6 +309,39 @@ export class RecordsComponent extends LitElement {
         return false;
     }
 
+    private handleMapMouseenter(evt) {
+        const map = evt?.target?.attributes?.map?.value;
+        if (map && !this._tooltipTapStates[map]) {
+            this._tooltipTapStates[map] = true;
+            this.scheduleEnableTooltip(map);
+        }
+    }
+
+    private handleMapMouseleave(evt) {
+        const map = evt?.target?.attributes?.map?.value;
+        if (map) {
+            this._tooltipTapStates[map] = false;
+            this.disableTooltip(map)
+        }
+    }
+
+    private handleTouchStart(evt) {
+        // handle double tap on phone to hide tooltip
+        if (evt.path && evt.path.find) {
+            const elem = evt.path.find(dom => dom.tagName == "TD");
+            const map = elem?.attributes?.map?.value;
+            if (map) {
+                if (this._tooltipTapStates[map]) {
+                    this._tooltipTapStates[map] = false;
+                    this.disableTooltip(map)
+                } else {
+                    this._tooltipTapStates[map] = true;
+                    this.enableTooltip(map)
+                }
+            }
+        }
+    }
+
     public renderPagination() {
         const pages = this.pages;
         if (pages <= 1) {
@@ -311,12 +378,59 @@ export class RecordsComponent extends LitElement {
         `;
     }
 
+    private scheduleEnableTooltip(map: string) {
+        const timeoutId = setTimeout(() => {
+            this.enableTooltip(map)
+        }, RecordsComponent.tooltipDelayTime);
+        this._tooltipTimeouts[map] = timeoutId;
+    }
+
+    private enableTooltip(map: string) {
+        let elem = this._mapshotsCache[map];
+        if (elem === undefined) {
+            // create new mapshoot
+            elem = new MapshotComponent();
+            elem.map = map;
+            this._mapshotsCache[map] = elem;
+            this.requestUpdate();
+        } else {
+            elem.hidden = false;
+        }
+    }
+
+    private disableTooltip(map: string) {
+        const timeoutId = this._tooltipTimeouts[map]
+        if (timeoutId !== undefined) {
+            clearTimeout(timeoutId);
+        }
+        let elem = this._mapshotsCache[map];
+        if (elem !== undefined) {
+            elem.hidden = true;
+        }
+    }
+
+    public renderMap(map: string) {
+        if (!this.tooltips) {
+            return html`<td class="col-map">${map}</td>`;
+        } else {
+            const elem = this._mapshotsCache[map];
+            return html`
+            <td class="col-map"
+                @mouseenter=${this.handleMapMouseenter}
+                @mouseleave=${this.handleMapMouseleave}
+                @touchstart=${this.handleTouchStart} map=${map}>
+                <span>${map}</span>${elem}
+            </td>
+            `;
+        }
+    }
+
     public render() {
         if (!this.loaded) {
             return html`<span>Loading records...</span>`;
         } else {
             return html`
-            <div>
+            <div class="record">
             <table>
             <colgroup>
                 <col class="col-map">
@@ -334,7 +448,7 @@ export class RecordsComponent extends LitElement {
             ${this.listRecords(this.currentPage).map((item) => {
                 return html`
                 <tr>
-                    <td class="col-map">${item.map}</td>
+                    ${this.renderMap(item.map)}
                     <td class="col-record">${item.value.toFixed(3)}</td>
                     <td class="col-nick"><xon-text text=${item.player}></xon-text></td>
                 </tr>
