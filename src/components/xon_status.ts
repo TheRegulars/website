@@ -269,15 +269,17 @@ export class StatusComponent extends LitElement {
         }
         table.players {
             margin-top: 1.3em;
-            border-spacing: 0.75em 0.075em;
+			border-spacing: 0;
             border-collapse: separate;
             width: 100%;
         }
-        table.mapinfo {
+        div.mapinfo {
             margin-left: auto;
             margin-right: auto;
         }
-        .mapinfo thead {
+        div.mapinfo > div {
+            margin-left: auto;
+            margin-right: auto;
             text-align: center;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -313,24 +315,32 @@ export class StatusComponent extends LitElement {
             white-space: nowrap;
         }
         col.col-player {
-            width: 38%;
+            width: 45%;
         }
         td.server-item {
             white-space: normal;
         }
         .col-slot, .col-ping {
             text-align: right;
+			padding-right: 10px;
+        }
+        .col-ping {
+            width: 8%;
         }
         .col-slot, .col-pl {
             width: 6%;
         }
         .col-time {
             width: 15%;
-            max-width: 8em;
+			padding-right: 2px;
+			padding-left: 2px;
         }
         .col-score {
             width: 18%;
         }
+		.players tbody > tr:hover {
+			background-color: rgba(255, 255, 255, 0.1);
+		}
         @media screen and (max-width: 550px) {
             .col-pl {
                 visibility: collapse;
@@ -488,18 +498,12 @@ export class StatusComponent extends LitElement {
             ${this.renderPerformance()}
         </tbody>
         </table>
-        <table class="mapinfo">
-            <thead>
-                <tr><th>Map: <span class="map-name">${this.serverStatus.map}</span></th></tr>
-            <thead>
-            <tbody>
-            <tr>
-                <td>
-                    <xon-mapshot map="${this.serverStatus.map}"></xon-mapshot>
-                </td>
-            </tr>
-            </tbody>
-        </table>
+        <div class="mapinfo">
+            <div>
+                Map: <span class="map-name">${this.serverStatus.map}</span>
+            </div>
+            <xon-mapshot map="${this.serverStatus.map}"></xon-mapshot>
+        </div>
         </div>
         ${this.renderPlayers()}
         </div>`;
