@@ -15,15 +15,20 @@
         "source": "**/*.@(eot|otf|ttf|ttc|woff|woff2)",
         "headers": [{
             "key": "Cache-Control",
-            "value": "max-age=86400"
+            "value": "max-age=5184000"
         }]
     }, {
         "source": "**/*.@(css|js)",
         "headers": [{
             "key": "Cache-Control",
-            "value": "max-age=2592000"
+            "value": "max-age=7776000"
         }]
-    }],
+    }, {
+        "source": "/images/*.@(png|jpg)",
+        "headers": [{
+            "key": "Cache-Control",
+            "value": "max-age=604800"
+    }]}],
     "ignore": [
       "firebase.json",
       "**/.*",
