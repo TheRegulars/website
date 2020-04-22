@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/md5"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -78,6 +79,10 @@ func healthz(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "OK\n")
 }
 
+func generateEtag(data []byte) string {
+	return fmt.Sprintf("%x", md5.Sum(data))
+}
+
 func records(w http.ResponseWriter, r *http.Request) {
 	conf := getConfig()
 	mapsSet := mapsState.GetMapsSet()
@@ -106,6 +111,7 @@ func records(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Etag", generateEtag(json))
 	w.Write(json)
 }
 
@@ -206,6 +212,7 @@ func maps(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Etag", generateEtag(json))
 	w.Write(json)
 }
 
