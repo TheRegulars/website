@@ -443,14 +443,6 @@ export class StatusComponent extends LitElement {
             }
         }
 
-        let cpuClass;
-        if (cpu <= 25) {
-            cpuClass = "metric-good";
-        } else if (cpu <= 68) {
-            cpuClass = "metric-fine";
-        } else {
-            cpuClass = "metric-bad";
-        }
         return html`
             <tr>
                 <td>CPU Usage:</td><td><span class=${metricClass(cpu, 28, 68)}>${cpu} %</span></td>

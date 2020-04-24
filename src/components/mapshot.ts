@@ -2,7 +2,7 @@ import { css, customElement, html, LitElement, property } from "lit-element";
 
 @customElement("xon-mapshot")
 export class MapshotComponent extends LitElement {
-    public static mapshotApi: string = "https://dl.regulars.win/mapshots/";
+    public static mapshotApi: string = MAPSHOT_BASE_URL || "";
     public static missingMapshot: string = "/images/nopreview_map.png";
     @property ({type: Boolean}) public loaded = false;
     private imgDOM: Image | undefined = undefined;

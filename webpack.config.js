@@ -6,6 +6,9 @@ const ScriptExtHtmlWebpackPlugin = require('script-ext-html-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const OptimizeCssAssetsPlugin = require('optimize-css-assets-webpack-plugin');
+const { InjectManifest } = require('workbox-webpack-plugin');
+const { DefinePlugin } = require('webpack');
+const Terser = require('terser-webpack-plugin');
 
 var webpackMode = 'development';
 
@@ -31,6 +34,9 @@ module.exports = {
     },
     plugins: [
         new CleanWebpackPlugin(),
+        new DefinePlugin({
+            MAPSHOT_BASE_URL: JSON.stringify("https://dl.regulars.win/mapshots/")
+        }),
         new CopyPlugin([
             { from: 'static/favicon.ico', to: 'favicon.ico'},
             { from: 'static/favicon-192x192.png', to: 'images/favicon-192x192.png'},
@@ -38,7 +44,8 @@ module.exports = {
             { from: 'static/images/', to: 'images/'},
             { from: 'static/fonts/', to: 'fonts/'},
             { from: 'static/robots.txt', to: 'robots.txt'},
-            { from: 'static/sitemap.xml', to: 'sitemap.xml'}
+            { from: 'static/sitemap.xml', to: 'sitemap.xml'},
+            { from: 'static/manifest.json', to: 'manifest.webmanifest'}
         ]),
         new HtmlWebpackPlugin({
             minify: htmlMinifyOpts,
@@ -48,6 +55,15 @@ module.exports = {
         new ScriptExtHtmlWebpackPlugin({defaultAttribute: 'async'}),
         new MiniCssExtractPlugin({
             filename: 'assets/style.[hash].css'
+        }),
+        new InjectManifest({
+            swSrc: './src/service-worker.ts',
+            swDest: './sw.js',
+            exclude: [
+                /\.map$/i,
+                'robots.txt',
+                'sitemap.xml'
+            ]
         })
     ],
     resolve: {
@@ -66,6 +82,8 @@ module.exports = {
                 language_in: 'ECMASCRIPT_2018',
                 language_out: 'ES6_STRICT'
             }),
+            // workbox supports only terser, so let's minize code again ;)
+            new Terser({}),
             new OptimizeCssAssetsPlugin({})
         ],
     },

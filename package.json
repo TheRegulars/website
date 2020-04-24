@@ -4,10 +4,10 @@
   "description": "The Regulars Website",
   "main": "./src/main.ts",
   "sideEffects": [
-      "./src/components/xon_status.ts",
-      "./src/components/records.ts",
-      "./src/components/mapshot.ts",
-      "./src/components/xon_text.ts"
+    "./src/components/xon_status.ts",
+    "./src/components/records.ts",
+    "./src/components/mapshot.ts",
+    "./src/components/xon_text.ts"
   ],
   "devDependencies": {
     "autoprefixer": "^9.7.6",
@@ -22,12 +22,14 @@
     "postcss-loader": "^3.0.0",
     "script-ext-html-webpack-plugin": "^2.1.4",
     "style-loader": "^1.1.3",
+    "terser-webpack-plugin": "^2.3.5",
     "ts-loader": "^6.2.2",
     "tslint": "^5.20.1",
     "typescript": "^3.8.3",
     "webpack": "^4.42.1",
     "webpack-cli": "^3.3.11",
-    "webpack-dev-server": "^3.10.3"
+    "webpack-dev-server": "^3.10.3",
+    "workbox-webpack-plugin": "^5.1.2"
   },
   "scripts": {
     "build": "webpack",
@@ -42,6 +44,12 @@
   "author": "Slava",
   "license": "MIT",
   "dependencies": {
-    "lit-element": "^2.3.1"
+    "lit-element": "^2.3.1",
+    "workbox-broadcast-update": "^5.1.2",
+    "workbox-cacheable-response": "^5.1.2",
+    "workbox-expiration": "^5.1.2",
+    "workbox-precaching": "^5.1.2",
+    "workbox-routing": "^5.1.2",
+    "workbox-strategies": "^5.1.2"
   }
 }

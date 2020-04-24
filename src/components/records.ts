@@ -9,6 +9,7 @@ export class RecordsComponent extends LitElement {
     private _mapshotsCache: {[key: string]: MapshotComponent | undefined} = {};
     private _tooltipTimeouts: {[key: string]: number | undefined} = {};
     private _tooltipTapStates: {[key: string]: boolean | undefined} = {};
+    private _broadcastUpdateHandler = undefined;
 
     static get observedAttributes() {
         return super.observedAttributes.concat(["data-url"]);
@@ -230,6 +231,21 @@ export class RecordsComponent extends LitElement {
     constructor() {
         super();
         this.setCurrentPage();
+        this._broadcastUpdateHandler = (async (event) => {
+            if (event.data.meta === "workbox-broadcast-update") {
+                const {cacheName, updateUrl} = event.data.payload;
+                if (updateUrl === this.dataUrl) {
+                    const cache = await caches.open(cacheName);
+                    const updatedResponse = await cache.match(updateUrl);
+                    const updatedData = await updatedResponse.json();
+                    this.recordsReceived(updatedData);
+                }
+            }
+        }).bind(this);
+
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.addEventListener("message", this._broadcastUpdateHandler);
+        }
     }
 
     public setCurrentPage() {
@@ -258,8 +274,26 @@ export class RecordsComponent extends LitElement {
         window.addEventListener("hashchange", this.hashChangeHandler);
     }
 
+    private recordsReceived(data) {
+        this.loaded = true;
+        this.records = Object.keys(data).sort().map((mapname) => {
+            const record = data[mapname];
+            return {
+                map: mapname,
+                player: record.name,
+                value: record.val
+            };
+        });
+        if (this.currentPage > this.pages) {
+            this.changePage(this.pages);
+        }
+    }
+
     public disconnectedCallback() {
         window.removeEventListener("hashchange", this.hashChangeHandler);
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.removeEventListener("message", this._broadcastUpdateHandler);
+        }
         super.disconnectedCallback();
     }
 
@@ -274,18 +308,7 @@ export class RecordsComponent extends LitElement {
             }
             return resp.json();
         }).then((data) => {
-            this.loaded = true;
-            this.records = Object.keys(data).sort().map((mapname) => {
-                const record = data[mapname];
-                return {
-                    map: mapname,
-                    player: record.name,
-                    value: record.val
-                };
-            });
-            if (this.currentPage > this.pages) {
-                this.changePage(this.pages);
-            }
+            this.recordsReceived(data);
         }).catch((err) => {
             console.log(err);
         });
