@@ -82,7 +82,9 @@ type ServerMetrics struct {
 }
 
 type rconReader struct {
-	conn net.Conn
+	conn  net.Conn
+	buf   []byte
+	slice []byte
 }
 
 type RconCallback = func(scanner *bufio.Scanner, result interface{}) error
@@ -302,16 +304,21 @@ LOOP:
 }
 
 func (r *rconReader) Read(p []byte) (int, error) {
-	for {
-		n, err := r.conn.Read(p)
-		if err != nil {
-			return 0, err
-		}
-		if bytes.HasPrefix(p[:n], []byte(RconResponseHeader)) {
-			copy(p, p[len(RconResponseHeader):n])
-			return n - len(RconResponseHeader), nil
+	if len(r.slice) == 0 {
+		for {
+			n, err := r.conn.Read(r.buf)
+			if err != nil {
+				return 0, err
+			}
+			if bytes.HasPrefix(r.buf[:n], []byte(RconResponseHeader)) {
+				r.slice = r.buf[len(RconResponseHeader):n]
+				break
+			}
 		}
 	}
+	num := copy(p, r.slice)
+	r.slice = r.slice[num:len(r.slice)]
+	return num, nil
 }
 
 func rconScanner(server *ServerConfig, deadline time.Time, rpc RconScannerRPC) error {
@@ -362,9 +369,8 @@ func rconScanner(server *ServerConfig, deadline time.Time, rpc RconScannerRPC) e
 	if err != nil {
 		return err
 	}
-	rconReader := &rconReader{conn: conn}
+	rconReader := &rconReader{conn: conn, buf: readBuffer, slice: nil}
 	scanner := bufio.NewScanner(rconReader)
-	scanner.Buffer(readBuffer, XonMSS)
 	return rpc.callback(scanner, rpc.state)
 }
 
