@@ -150,7 +150,8 @@ def generate_mapshots(pk3_filepath, upload_callback):
 def main():
     parser = argparse.ArgumentParser(description='Mapshot uploader')
     parser.add_argument('-d', '--path', help='datadir path', type=str, nargs='+', required=True)
-    parser.add_argument('--upload-path', help='Filepath or S3 upload url', type=filepath_or_s3_url)
+    parser.add_argument('--upload-path', help='Filepath or S3 upload url', type=filepath_or_s3_url,
+                        required=True)
     args = parser.parse_args()
 
     if args.upload_path[0] == 'dir':
