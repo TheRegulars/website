@@ -1,6 +1,6 @@
 /* tslint:disable:no-bitwise */
 
-const qfontAsciiTable: string[] = [
+export const qfontAsciiTable: string[] = [
      "\0", "#",  "#",  "#",  "#",  ".",  "#",  "#",
      "#",  "\t", "\n", "#",  " ",  "\r", ".",  ".",
      "[",  "]",  "0",  "1",  "2",  "3",  "4",  "5",
@@ -35,7 +35,7 @@ const qfontAsciiTable: string[] = [
      "x",  "y",  "z",  "{",  "|",  "}",  "~",  "<"
     ];
 
-const qfontUnicodeTable: string[] = [
+export const qfontUnicodeTable: string[] = [
     " ", " ", "\u2014", " ", "_", "\u2747", "\u2020",
     "\u00b7", "\ud83d\udd2b", " ", " ", "\u25a0",
     "\u2022", "\u2192", "\u2748", "\u2748", "[", "]",

@@ -3,9 +3,9 @@ export class TemplateRouter {
 
     public contentContainer: HTMLElement | null = null;
     public initialized: boolean = false;
-    public routes: {[key: string]: HtmlTemplateElement} = {};
-    public activeLinks: HtmlLinkElement = [];
-    public attachedLinks: HtmlLinkElement = [];
+    public routes: {[key: string]: HTMLTemplateElement} = {};
+    public activeLinks: HTMLAnchorElement[] = [];
+    public attachedLinks: HTMLAnchorElement[] = [];
 
     public loadRoutes() {
         document.querySelectorAll("template[page-url]").forEach((template) => {
@@ -13,7 +13,7 @@ export class TemplateRouter {
             if (!url) {
                 return;
             }
-            this.routes[url] = template;
+            this.routes[url] = template as HTMLTemplateElement;
         });
     }
 
@@ -22,7 +22,7 @@ export class TemplateRouter {
         if (template === undefined || this.contentContainer === null) {
             return;
         }
-        const title = template.getAttribute("title");
+        const title = template.getAttribute("title") || "";
         this.contentContainer.innerHTML = "";
         this.contentContainer.appendChild(document.importNode(template.content, true));
         this.activeLinks.forEach((link) => {
@@ -52,10 +52,10 @@ export class TemplateRouter {
     }
 
     public clickHandler(event: MouseEvent) {
-        if (event.target.tagName !== "A") {
+        const elem: HTMLAnchorElement = event.target as HTMLAnchorElement;
+        if (elem?.tagName !== "A") {
             return true;
         }
-        const elem: HtmlLinkElement = event.target;
         if (elem.pathname in this.routes) {
             event.preventDefault();
             this.changeRoute(elem.pathname, true);
@@ -65,7 +65,8 @@ export class TemplateRouter {
     }
 
     public bindLinks() {
-        document.querySelectorAll("a[router]").forEach((link) => {
+        document.querySelectorAll("a[router]").forEach((elem) => {
+            const link = elem as HTMLAnchorElement;
             link.addEventListener("click", this.clickHandler.bind(this));
             if (link.classList.contains("active")) {
                 this.activeLinks.push(link);

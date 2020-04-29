@@ -1,4 +1,4 @@
-import { css, customElement, html, LitElement, property } from "lit-element";
+import { customElement, LitElement, property } from "lit-element";
 import { dptextDOM } from "../dptext";
 
 @customElement("xon-text")

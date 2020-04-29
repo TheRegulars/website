@@ -5,11 +5,11 @@ export class MapshotComponent extends LitElement {
     public static mapshotApi: string = MAPSHOT_BASE_URL || "";
     public static missingMapshot: string = "/images/nopreview_map.png";
     @property ({type: Boolean}) public loaded = false;
-    private imgDOM: Image | undefined = undefined;
+    private imgDOM: HTMLImageElement | undefined = undefined;
 
-    private _map: string;
+    private _map: string = "";
 
-    @property({type: String, hasChanged: (newVal, oldVal) => {
+    @property({type: String, hasChanged: (newVal: string, oldVal: string) => {
         return newVal.toLowerCase() !== oldVal.toLowerCase();
     }})
     public get map(): string {
@@ -39,7 +39,7 @@ export class MapshotComponent extends LitElement {
         return `${MapshotComponent.mapshotApi}${this.map}.${ext}`;
     }
 
-    private imageLoaded(img: Image, missing: boolean) {
+    private imageLoaded(img: HTMLImageElement, _missing: boolean) {
         img.alt = this.map;
         this.imgDOM = img;
         this.loaded = true;
@@ -52,13 +52,13 @@ export class MapshotComponent extends LitElement {
         pngImg.src = this.mapshotURL("png");
         jpgImg.src = this.mapshotURL("jpg");
         missingImg.src = MapshotComponent.missingMapshot;
-        let pngPromise = new Promise((resolve, reject) => {
+        let pngPromise: Promise<HTMLImageElement> = new Promise((resolve, reject) => {
             pngImg.onload = (() => resolve(pngImg));
-            pngImg.onerror = pngImg.onAbort = ((evt) => reject(evt));
+            pngImg.onerror = pngImg.onabort = ((evt: string | Event) => reject(evt));
         });
-        let jpgPromise = new Promise((resolve, reject) => {
+        let jpgPromise: Promise<HTMLImageElement> = new Promise((resolve, reject) => {
             jpgImg.onload = (() => resolve(jpgImg));
-            jpgImg.onerror = jpgImg.onAbort = ((evt) => reject(evt));
+            jpgImg.onerror = jpgImg.onabort = ((evt: string | Event) => reject(evt));
         });
         pngPromise.then((img) => {
             // cancel jpg loading
@@ -74,14 +74,14 @@ export class MapshotComponent extends LitElement {
         });
     }
 
-    public attributeChangedCallback(name, oldVal, newVal) {
+    public attributeChangedCallback(name: string, oldVal: any, newVal: any) {
         if (name === "map") {
             this.loaded = false;
         }
         super.attributeChangedCallback(name, oldVal, newVal);
     }
 
-    public updated(changedProperties) {
+    public updated(changedProperties: any) {
         if (!this.loaded) {
             this.loadImage();
         }

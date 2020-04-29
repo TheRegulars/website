@@ -5,12 +5,7 @@ import { BroadcastUpdatePlugin } from "workbox-broadcast-update";
 import { ExpirationPlugin } from "workbox-expiration";
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
-interface Manifest {
-    url: string,
-    revision: null | string
-}
-
-let wbManifest: Manifest[] = self.__WB_MANIFEST || [];
+let wbManifest = self.__WB_MANIFEST || [];
 const mapshotURL = MAPSHOT_BASE_URL || "";
 const precacheMaps = [
     "blockscape-inverted.jpg", "centermatchbig_v4_s.jpg",

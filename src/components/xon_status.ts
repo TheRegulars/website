@@ -1,6 +1,36 @@
 import { css, customElement, html, LitElement, property } from "lit-element";
 
-function getConnection(): object | undefined {
+interface XonTiming {
+    cpu: number;
+    lost: number;
+    offset_avg: number;
+    offset_max: number;
+    offset_sdev: number;
+}
+
+interface XonPlayer {
+    no: number;
+    ping: number;
+    pl: number;
+    time: string;
+    frags: number;
+    name: string;
+    is_bot: boolean;
+}
+
+interface XonServerStatus {
+    sv_public: number;
+    host: string;
+    version: string;
+    protocol: string;
+    map: string;
+    timing: XonTiming;
+    players_count: number;
+    players_max: number;
+    players:  XonPlayer[];
+}
+
+function getConnection(): NetworkInformation | undefined {
     return navigator.connection || navigator.mozConnection || navigator.webkitConnection;
 }
 
@@ -10,19 +40,19 @@ export class StatusComponent extends LitElement {
 
     static goodConnectionRefreshInterval: number = 20;
     static badConnectionRefreshInterval: number = 120;
-    private _connectionHandler = undefined;
-    private _visibilityHandler = undefined;
+    private _connectionHandler: (evt: Event) => void;
+    private _visibilityHandler: (evt: Event) => void;
     private _loaded = false;
     private _autorefresh: boolean = true;
     private _dataUrl: string = "";
     private _timerId: number | undefined = undefined;
 
-    @property({type: Object}) public serverStatus = {};
+    @property({type: Object}) public serverStatus: XonServerStatus | undefined = undefined;
     @property({type: String}) public connectHost: string = "";
     @property({type: String}) public xonStatsUrl: string = "";
 
-    @property({type: Object}) public lastRequestedDate;
-    @property({type: Object}) public lastLoadedDate;
+    @property({type: Object}) public lastRequestedDate: Date | undefined;
+    @property({type: Object}) public lastLoadedDate: Date | undefined;
 
     @property({type: Number})
     public get refreshInterval() {
@@ -32,11 +62,16 @@ export class StatusComponent extends LitElement {
             return StatusComponent.goodConnectionRefreshInterval;
         } else if (connection.saveData || connection.effectiveType === 'slow-2g' ||
                    connection.effectiveType === '2g' || connection.effectiveType === '3g' ||
-                   connection.downlink < 0.5) {
+                   (connection.downlink && connection.downlink < 0.5)) {
             return StatusComponent.badConnectionRefreshInterval;
         } else {
             return StatusComponent.goodConnectionRefreshInterval;
         }
+    }
+    constructor() {
+        super();
+        this._visibilityHandler = this.visiblityChanged.bind(this);
+        this._connectionHandler = this.connectionChanged.bind(this);
     }
 
     @property({type: String})
@@ -98,12 +133,12 @@ export class StatusComponent extends LitElement {
 
     private enableAutoRefresh() {
         this._autorefresh = true;
-        this._timerId = setInterval(this.reloadData.bind(this), this.refreshInterval * 1000);
+        this._timerId = window.setInterval(this.reloadData.bind(this), this.refreshInterval * 1000);
     }
 
     private disableAutoRefresh() {
         if (this._timerId !== undefined) {
-            clearInterval(this._timerId);
+            window.clearInterval(this._timerId);
         }
         this._autorefresh = false;
     }
@@ -128,11 +163,11 @@ export class StatusComponent extends LitElement {
         }
     }
     // called when internet connection have changed
-    private connectionChanged(evt) {
+    private connectionChanged(_evt: Event) {
         this.updateAutoRefresh();
     }
 
-    private visiblityChanged(evt) {
+    private visiblityChanged(_evt: Event) {
         this.updateAutoRefresh();
     }
 
@@ -142,13 +177,11 @@ export class StatusComponent extends LitElement {
 
         // listen for connection changes
         if (connection && connection.addEventListener) {
-            this._connectionHandler = this.connectionChanged.bind(this);
             connection.addEventListener("change", this._connectionHandler);
         }
 
         // listen for visiblity changes
         if (typeof document.hidden !== "undefined") {
-            this._visibilityHandler = this.visiblityChanged.bind(this);
             document.addEventListener("visibilitychange", this._visibilityHandler);
         }
 
@@ -160,8 +193,8 @@ export class StatusComponent extends LitElement {
 
     public disconnectedCallback() {
         super.disconnectedCallback();
-        if (this._connectionHandler) {
-            const connection = getConnection();
+        const connection = getConnection();
+        if (connection && connection.addEventListener) {
             connection.removeEventListener("change", this._connectionHandler);
         }
         if (this._visibilityHandler) {
@@ -421,6 +454,9 @@ export class StatusComponent extends LitElement {
     }
 
     private renderPerformance() {
+        if (!this.serverStatus || !this.serverStatus.timing) {
+            return html``;
+        }
         const timing = this.serverStatus?.timing;
         const cpu = timing?.cpu;
         const offsetMax = timing?.offset_max;
@@ -433,7 +469,6 @@ export class StatusComponent extends LitElement {
         }
 
         function metricClass(value: number, val1: number, val2: number) {
-            let metricClass;
             if (value <= val1) {
                 return "metric-good";
             } else if (value <= val2) {
@@ -462,7 +497,7 @@ export class StatusComponent extends LitElement {
     }
 
     public render() {
-        if (!this.loaded) {
+        if (!this.loaded || !this.serverStatus) {
             return html`<p>Status</p>`;
         }
         const statsUrl = this.xonStatsUrl ?
@@ -492,7 +527,7 @@ export class StatusComponent extends LitElement {
         </table>
         <div class="mapinfo">
             <div>
-                Map: <span class="map-name">${this.serverStatus.map}</span>
+                Map: <span class="map-name">${this.serverStatus?.map}</span>
             </div>
             <xon-mapshot map="${this.serverStatus.map}"></xon-mapshot>
         </div>

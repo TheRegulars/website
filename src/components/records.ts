@@ -1,6 +1,28 @@
 import { css, customElement, html, LitElement, property } from "lit-element";
 import { MapshotComponent } from "./mapshot";
 
+interface RecordItem {
+    map: string;
+    player: string;
+    value: number;
+}
+
+interface RecordsApi {
+    [map: string]: {
+        name: string;
+        val: number;
+    }
+}
+
+
+function getMapFromEvent(event: MouseEvent): string | undefined {
+    const elem = event?.target as HTMLElement;
+    if (elem) {
+        return elem.attributes.getNamedItem("map")?.value;
+    }
+    return undefined;
+}
+
 
 @customElement("xon-records")
 export class RecordsComponent extends LitElement {
@@ -9,7 +31,7 @@ export class RecordsComponent extends LitElement {
     private _mapshotsCache: {[key: string]: MapshotComponent | undefined} = {};
     private _tooltipTimeouts: {[key: string]: number | undefined} = {};
     private _tooltipTapStates: {[key: string]: boolean | undefined} = {};
-    private _broadcastUpdateHandler = undefined;
+    private _broadcastUpdateHandler: (evt: MessageEvent) => Promise<void>;
 
     static get observedAttributes() {
         return super.observedAttributes.concat(["data-url"]);
@@ -220,10 +242,10 @@ export class RecordsComponent extends LitElement {
     }
 
     public static pageRegexp = /^#?page-(\d+)$/i;
-    private hashChangeHandler = null;
+    private hashChangeHandler: (evt: HashChangeEvent) => void;
 
     @property({type: Boolean}) public loaded = false;
-    @property({type: Array}) public records = [];
+    @property({type: Array}) public records: RecordItem[] = [];
     @property({type: Number}) public pageBy = 50;
     @property({type: Number}) public currentPage = 1;
     @property({type: Boolean}) public tooltips = true;
@@ -231,14 +253,16 @@ export class RecordsComponent extends LitElement {
     constructor() {
         super();
         this.setCurrentPage();
-        this._broadcastUpdateHandler = (async (event) => {
+        this._broadcastUpdateHandler = (async (event: MessageEvent) => {
             if (event.data.meta === "workbox-broadcast-update") {
                 const {cacheName, updateUrl} = event.data.payload;
                 if (updateUrl === this.dataUrl) {
                     const cache = await caches.open(cacheName);
                     const updatedResponse = await cache.match(updateUrl);
-                    const updatedData = await updatedResponse.json();
-                    this.recordsReceived(updatedData);
+                    if (updatedResponse) {
+                        const updatedData = await updatedResponse.json();
+                        this.recordsReceived(updatedData);
+                    }
                 }
             }
         }).bind(this);
@@ -246,6 +270,7 @@ export class RecordsComponent extends LitElement {
         if ("serviceWorker" in navigator) {
             navigator.serviceWorker.addEventListener("message", this._broadcastUpdateHandler);
         }
+        this.hashChangeHandler = this.hashChange.bind(this);
     }
 
     public setCurrentPage() {
@@ -270,11 +295,10 @@ export class RecordsComponent extends LitElement {
 
     public connectedCallback() {
         super.connectedCallback();
-        this.hashChangeHandler = this.hashChange.bind(this);
         window.addEventListener("hashchange", this.hashChangeHandler);
     }
 
-    private recordsReceived(data) {
+    private recordsReceived(data: RecordsApi) {
         this.loaded = true;
         this.records = Object.keys(data).sort().map((mapname) => {
             const record = data[mapname];
@@ -297,7 +321,7 @@ export class RecordsComponent extends LitElement {
         super.disconnectedCallback();
     }
 
-    public hashChange(event: HashChangeEvent) {
+    public hashChange(_event: HashChangeEvent) {
         this.setCurrentPage();
     }
 
@@ -324,7 +348,11 @@ export class RecordsComponent extends LitElement {
     }
 
     public clickPage(event: MouseEvent) {
-        const newPage = parseInt(event.target.getAttribute("switch-page"), 10);
+        const elem = event?.target as HTMLElement;
+        if (!elem) {
+            return true;
+        }
+        const newPage = parseInt(elem.getAttribute("switch-page") || "", 10);
         if (!Number.isNaN(newPage) && newPage >= 1 && newPage <= this.pages) {
             this.changePage(newPage);
         }
@@ -332,24 +360,26 @@ export class RecordsComponent extends LitElement {
         return false;
     }
 
-    private handleMapMouseenter(evt) {
-        const map = evt?.target?.attributes?.map?.value;
+    private handleMapMouseenter(evt: MouseEvent) {
+        const map = getMapFromEvent(evt);
         if (map && !this._tooltipTapStates[map]) {
             this._tooltipTapStates[map] = true;
             this.scheduleEnableTooltip(map);
         }
     }
 
-    private handleMapMouseleave(evt) {
-        const map = evt?.target?.attributes?.map?.value;
+    private handleMapMouseleave(evt: MouseEvent) {
+        const map = getMapFromEvent(evt);
         if (map) {
             this._tooltipTapStates[map] = false;
             this.disableTooltip(map)
         }
     }
 
-    private handleTouchStart(evt) {
+    private handleTouchStart(_evt: TouchEvent) {
         // handle double tap on phone to hide tooltip
+        // TODO: fix this
+        /*
         if (evt.path && evt.path.find) {
             const elem = evt.path.find(dom => dom.tagName == "TD");
             const map = elem?.attributes?.map?.value;
@@ -363,6 +393,7 @@ export class RecordsComponent extends LitElement {
                 }
             }
         }
+        */
     }
 
     public renderPagination() {
@@ -402,7 +433,7 @@ export class RecordsComponent extends LitElement {
     }
 
     private scheduleEnableTooltip(map: string) {
-        const timeoutId = setTimeout(() => {
+        const timeoutId = window.setTimeout(() => {
             this.enableTooltip(map)
         }, RecordsComponent.tooltipDelayTime);
         this._tooltipTimeouts[map] = timeoutId;
@@ -424,7 +455,7 @@ export class RecordsComponent extends LitElement {
     private disableTooltip(map: string) {
         const timeoutId = this._tooltipTimeouts[map]
         if (timeoutId !== undefined) {
-            clearTimeout(timeoutId);
+            window.clearTimeout(timeoutId);
         }
         let elem = this._mapshotsCache[map];
         if (elem !== undefined) {
