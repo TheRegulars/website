@@ -1,5 +1,4 @@
 import { css, customElement, html, LitElement, property } from "lit-element";
-import { MapshotComponent } from "./mapshot";
 
 interface RecordItem {
     map: string;
@@ -14,23 +13,10 @@ interface RecordsApi {
     }
 }
 
-
-function getMapFromEvent(event: MouseEvent): string | undefined {
-    const elem = event?.target as HTMLElement;
-    if (elem) {
-        return elem.attributes.getNamedItem("map")?.value;
-    }
-    return undefined;
-}
-
-
 @customElement("xon-records")
 export class RecordsComponent extends LitElement {
 
     private _dataUrl: string = "";
-    private _mapshotsCache: {[key: string]: MapshotComponent | undefined} = {};
-    private _tooltipTimeouts: {[key: string]: number | undefined} = {};
-    private _tooltipTapStates: {[key: string]: boolean | undefined} = {};
     private _broadcastUpdateHandler: (evt: MessageEvent) => Promise<void>;
 
     static get observedAttributes() {
@@ -62,34 +48,16 @@ export class RecordsComponent extends LitElement {
 
     static get styles() {
         return css`
-            xon-mapshot {
-                user-select: none;
-                position: absolute;
+            * {
+                padding: 0;
+                margin: 0;
+            }
+            xon-mapshot-tooltip {
                 width: 100%;
-                bottom: 100%;
-                left: 50%;
-                margin-left: -50%;
-                pointer-events: none;
-                z-index: 1;
-                animation: mapshot 310ms ease-in none;
-                background-color: #000;
-                border: solid 1.8px #999;
-                border-radius: 5px;
+                height: 100%;
+                display: inline-flex;
             }
 
-            @keyframes mapshot {
-                0% {
-                    opacity: 0.1;
-                    transform: scale(0) translate(-50%, 50%);
-                }
-                100% {
-                    opacity: 1;
-                    transform: scale(1) translate(0, 0);
-                }
-            }
-            xon-mapshot[hidden] {
-                display: none;
-            }
             col.col-map {
                 width: 40%;
             }
@@ -140,21 +108,11 @@ export class RecordsComponent extends LitElement {
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
-            td.col-map > span {
-                display: block;
-                width: 100%;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
             td.col-nick {
                 padding-left: 15px;
             }
             td.col-record {
                 text-align: center;
-            }
-
-            td.col-map {
-                position: relative;
             }
 
             .pagination {
@@ -360,42 +318,6 @@ export class RecordsComponent extends LitElement {
         return false;
     }
 
-    private handleMapMouseenter(evt: MouseEvent) {
-        const map = getMapFromEvent(evt);
-        if (map && !this._tooltipTapStates[map]) {
-            this._tooltipTapStates[map] = true;
-            this.scheduleEnableTooltip(map);
-        }
-    }
-
-    private handleMapMouseleave(evt: MouseEvent) {
-        const map = getMapFromEvent(evt);
-        if (map) {
-            this._tooltipTapStates[map] = false;
-            this.disableTooltip(map)
-        }
-    }
-
-    private handleTouchStart(_evt: TouchEvent) {
-        // handle double tap on phone to hide tooltip
-        // TODO: fix this
-        /*
-        if (evt.path && evt.path.find) {
-            const elem = evt.path.find(dom => dom.tagName == "TD");
-            const map = elem?.attributes?.map?.value;
-            if (map) {
-                if (this._tooltipTapStates[map]) {
-                    this._tooltipTapStates[map] = false;
-                    this.disableTooltip(map)
-                } else {
-                    this._tooltipTapStates[map] = true;
-                    this.enableTooltip(map)
-                }
-            }
-        }
-        */
-    }
-
     public renderPagination() {
         const pages = this.pages;
         if (pages <= 1) {
@@ -432,53 +354,6 @@ export class RecordsComponent extends LitElement {
         `;
     }
 
-    private scheduleEnableTooltip(map: string) {
-        const timeoutId = window.setTimeout(() => {
-            this.enableTooltip(map)
-        }, RecordsComponent.tooltipDelayTime);
-        this._tooltipTimeouts[map] = timeoutId;
-    }
-
-    private enableTooltip(map: string) {
-        let elem = this._mapshotsCache[map];
-        if (elem === undefined) {
-            // create new mapshoot
-            elem = new MapshotComponent();
-            elem.map = map;
-            this._mapshotsCache[map] = elem;
-            this.requestUpdate();
-        } else {
-            elem.hidden = false;
-        }
-    }
-
-    private disableTooltip(map: string) {
-        const timeoutId = this._tooltipTimeouts[map]
-        if (timeoutId !== undefined) {
-            window.clearTimeout(timeoutId);
-        }
-        let elem = this._mapshotsCache[map];
-        if (elem !== undefined) {
-            elem.hidden = true;
-        }
-    }
-
-    public renderMap(map: string) {
-        if (!this.tooltips) {
-            return html`<td class="col-map">${map}</td>`;
-        } else {
-            const elem = this._mapshotsCache[map];
-            return html`
-            <td class="col-map"
-                @mouseenter=${this.handleMapMouseenter}
-                @mouseleave=${this.handleMapMouseleave}
-                @touchstart=${this.handleTouchStart} map=${map}>
-                <span>${map}</span>${elem}
-            </td>
-            `;
-        }
-    }
-
     public render() {
         if (!this.loaded) {
             return html`<span>Loading records...</span>`;
@@ -502,7 +377,7 @@ export class RecordsComponent extends LitElement {
             ${this.listRecords(this.currentPage).map((item) => {
                 return html`
                 <tr>
-                    ${this.renderMap(item.map)}
+                    <td class="col-map"><xon-mapshot-tooltip map="${item.map}"></xon-mapshot-tooltip></td>
                     <td class="col-record">${item.value.toFixed(3)}</td>
                     <td class="col-nick"><xon-text text=${item.player}></xon-text></td>
                 </tr>

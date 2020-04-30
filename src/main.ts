@@ -1,6 +1,7 @@
 import { TemplateRouter } from "./router";
 import  "./components/xon_text";
 import  "./components/mapshot";
+import  "./components/mapshot_tooltip";
 import  "./components/records";
 import  "./components/xon_status";
 

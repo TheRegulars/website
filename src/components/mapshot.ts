@@ -18,10 +18,12 @@ export class MapshotComponent extends LitElement {
 
     public set map(value: string) {
         const oldValue = this.map;
-        if (oldValue !== value) {
-            this.loaded = false;
-        }
         this._map = value.toLowerCase();
+        if (oldValue.toLowerCase() !== value.toLowerCase()) {
+            this.loaded = false;
+            // load image eagerly
+            this.loadImage();
+        }
         this.requestUpdate('map', oldValue);
     }
 
@@ -42,13 +44,25 @@ export class MapshotComponent extends LitElement {
         return `${MapshotComponent.mapshotApi}${this.map}.${ext}`;
     }
 
-    private imageLoaded(img: HTMLImageElement, _missing: boolean) {
+    private imageLoaded(img: HTMLImageElement, missing: boolean) {
         img.alt = this.map;
         this.imgDOM = img;
         this.loaded = true;
+        const event = new CustomEvent("load", {
+            bubbles: false,
+            cancelable: false,
+            detail: {
+                missing: missing
+            }
+        });
+        this.requestUpdate();
+        this.dispatchEvent(event);
     }
 
     private loadImage() {
+        if (!this.map) {
+            return;
+        }
         let pngImg = new Image(); 
         let jpgImg = new Image();
         let missingImg = new Image();
@@ -75,13 +89,6 @@ export class MapshotComponent extends LitElement {
                 this.imageLoaded(missingImg, true);
             });
         });
-    }
-
-    public updated(changedProperties: any) {
-        if (!this.loaded) {
-            this.loadImage();
-        }
-        super.updated(changedProperties);
     }
 
     public render() {
