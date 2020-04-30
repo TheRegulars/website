@@ -18,6 +18,9 @@ export class MapshotComponent extends LitElement {
 
     public set map(value: string) {
         const oldValue = this.map;
+        if (oldValue !== value) {
+            this.loaded = false;
+        }
         this._map = value.toLowerCase();
         this.requestUpdate('map', oldValue);
     }
@@ -72,13 +75,6 @@ export class MapshotComponent extends LitElement {
                 this.imageLoaded(missingImg, true);
             });
         });
-    }
-
-    public attributeChangedCallback(name: string, oldVal: any, newVal: any) {
-        if (name === "map") {
-            this.loaded = false;
-        }
-        super.attributeChangedCallback(name, oldVal, newVal);
     }
 
     public updated(changedProperties: any) {
