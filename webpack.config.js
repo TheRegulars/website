@@ -40,6 +40,7 @@ module.exports = {
         new CopyPlugin([
             { from: 'static/favicon.ico', to: 'favicon.ico'},
             { from: 'static/favicon-192x192.png', to: 'images/favicon-192x192.png'},
+            { from: 'static/favicon-96x96.png', to: 'images/favicon-96x96.png'},
             { from: 'static/apple-touch-icon.png', to: 'images/apple-touch-icon.png'},
             { from: 'static/images/', to: 'images/'},
             { from: 'static/fonts/', to: 'fonts/'},

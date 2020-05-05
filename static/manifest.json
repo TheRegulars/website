@@ -7,25 +7,22 @@
     "background_color": "#fff",
     "description": "See players and maps on regulars xon servers.",
     "icons": [{
-        "src": "/images/pwa-512.png",
-        "sizes": "512x512",
-        "type": "image/png",
-        "purpose": "maskable"
-    }, {
         "src": "/images/pwa-192.png",
         "sizes": "192x192",
         "type": "image/png",
         "purpose": "maskable"
     }, {
-        "src": "/images/favicon-192x192.png",
-        "sizes": "192x192",
-        "type": "image/png",
-        "purpose": "any"
-    }, {
-    }, {
         "src": "/images/pwa-96.png",
         "sizes": "96x96",
         "type": "image/png",
         "purpose": "maskable"
+    }, {
+        "src": "/images/favicon-192x192.png",
+        "sizes": "192x192",
+        "type": "image/png"
+    },{
+        "src": "/images/favicon-96x96.png",
+        "sizes": "96x96",
+        "type": "image/png"
     }]
 }
