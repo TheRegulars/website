@@ -4,7 +4,8 @@ html, body {
 
 body {
     text-rendering: optimizeLegibility!important;
-    background: rgb(36, 37, 38);
+    background-color: rgb(36, 37, 38);
+    background-attachment: fixed;
     color: #fff;
     display: flex;
     flex-direction: column;

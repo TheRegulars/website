@@ -85,6 +85,13 @@ const enum DPTextParserState {
     Hex2
 }
 
+const enum ColorType {
+    Short,
+    Hex
+}
+
+type XonColor = [ColorType, number];
+
 const digitRe = /^\d$/;
 const hexDigitRe = /^[\dA-F]$/i;
 
@@ -106,7 +113,7 @@ class DPTextParser {
         this.buffer += data;
     }
 
-    public next(): string | number | null {
+    public next(): string | XonColor | null {
         if (this.buffer.length <= 0) {
             return null;
         }
@@ -149,8 +156,9 @@ class DPTextParser {
                         this.decoding = "";
                         const res = parseInt(this.buffer[0], 10);
                         this.buffer = this.buffer.slice(1);
-                        return res;
+                        return [ColorType.Short, res];
                     } else {
+                        this.state = DPTextParserState.Initial;
                         const res = this.decoding;
                         this.decoding = "";
                         return res;
@@ -169,7 +177,7 @@ class DPTextParser {
                             const res = this.hex;
                             this.decoding = "";
                             this.hex = 0;
-                            return res;
+                            return [ColorType.Hex, res];
                         }
                     } else {
                         this.state = DPTextParserState.Initial;
@@ -205,19 +213,28 @@ function decodeQChars(str: string, qtable: string[] = qfontUnicodeTable): string
     return out.join("");
 }
 
-function dpcolorStyle(color: number): string {
+export function dpcolorStyle(color: number, defaultColor: number = 0xfff): string {
+    if (color === defaultColor) {
+        return "";
+    }
     let r = ((color >> 8) & 0xf).toString(16);
     let g = ((color >> 4) & 0xf).toString(16);
     let b = (color & 0xf).toString(16);
     return "#" + r + r + g + g + b + b;
 }
 
-export function dptextDOM(str: string, defaultColor: number = 0xfff): HTMLSpanElement {
+export type ColorMap = (c: number, d: number) => string;
+
+// ^x466i^x975n^xDA2c^xC64o^x435g^xD32n^x924i^x696c^x894o^x258 ٩(^ᴗ^)۶^7
+// "^x466i^x975n^xDA2c^xC64o^x435g^xD32n^x924i^x696c^x894o^x258 ٩(^ᴗ^)۶^7"
+export function dptextDOM(str: string, defaultColor: number = 0xfff,
+                          colorMap: ColorMap = dpcolorStyle): HTMLSpanElement {
+
     let baseElem = document.createElement("span");
     let elem = baseElem;
     let prevColor = defaultColor;
     let parser = new DPTextParser();
-    let token: string | number | null;
+    let token: string | XonColor | null;
     let color = prevColor;
     parser.write(str);
     for (;;) {
@@ -225,19 +242,17 @@ export function dptextDOM(str: string, defaultColor: number = 0xfff): HTMLSpanEl
         if (typeof token === "string") {
             if (color !== prevColor) {
                 let newElem = document.createElement("span");
-                if (color !== defaultColor) {
-                    newElem.style.color = dpcolorStyle(color);
-                }
+                newElem.style.color = colorMap(color, defaultColor);
                 baseElem.appendChild(newElem);
                 elem = newElem;
             }
             elem.innerText += decodeQChars(token);
-        } else if (typeof token === "number") {
+        } else if (typeof token === "object" && token !== null) {
             prevColor = color;
-            if (token >= 0 && token < 10) {
-                color = smallColors[token];
+            if (token[0] === ColorType.Short) {
+                color = smallColors[token[1]];
             } else {
-                color = token;
+                color = token[1];
             }
         } else if (token === null) {
             break;
@@ -283,4 +298,23 @@ document.addEventListener('DOMContentLoaded', function() {
     //document.body.innerHTML = 'test';
     console.log("done");
 })
+*/
+
+/*
+let testText = "^x466i^x975n^xDA2c^xC64o^x435g^xD32n^x924i^x696c^x894o^x258 ٩(^ᴗ^)۶^7";
+let parser = new DPTextParser();
+parser.write(testText);
+for (;;) {
+    let res = parser.next();
+    if (res != null) {
+        if (typeof res === "string") {
+            console.log(decodeQChars(res));
+        } else {
+            console.log(res);
+        }
+    } else {
+        console.log(parser.end());
+        break;
+    }
+}
 */
