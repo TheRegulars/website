@@ -5,12 +5,17 @@ import  "./components/mapshot_tooltip";
 import  "./components/records";
 import  "./components/xon_status";
 
-function loadFonts() {
+function loadFont(href: string) {
     let link = document.createElement("link");
     link.type = "text/css";
     link.rel = "stylesheet";
-    link.href = "https://fonts.googleapis.com/css2?family=PT+Serif:wght@400;700&display=swap";
+    link.href = href;
     document.head.appendChild(link);
+}
+
+function loadFonts() {
+    loadFont("https://fonts.googleapis.com/css2?family=PT+Serif:wght@400;700&display=swap");
+    loadFont("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/solid.min.css");
 }
 
 function documentReady() {

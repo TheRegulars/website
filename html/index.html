@@ -11,6 +11,7 @@
         <link rel="manifest" href="/manifest.webmanifest">
         <link href="https://fonts.googleapis.com/css2?family=PT+Serif&display=swap" rel="stylesheet">
         <link rel="preload" href="https://fonts.googleapis.com/css2?family=PT+Serif:wght@400;700&display=swap" as="style" >
+        <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/solid.min.css" as="style">
         <base href="/">
         <title>Welcome to The Regulars</title>
     </head>
@@ -42,6 +43,62 @@
                     All server configurations available under this <a href="https://regulars.win/configs">link</a>.
                 </p>
 
+                <h2>Demo Archive</h2>
+                <p>
+                Over time there was number of tournaments that was hosted on regulars servers, most of them had server side
+                demo recording, this archive contains list of such demo records for each Point of View.
+                </p>
+                <ul class="demo-list">
+                    <li>
+                        <time>2020-04-25</time>:
+                        <a href="https://forums.xonotic.org/showthread.php?tid=8303">lockdown cup (2v2 iCTF)</a> &mdash;
+                        <span class="demo-info">
+                            <a download href="https://demos.regulars.win/cups/2020/lockdowncup_2v2ictf.tar.xz">download link</a>
+                            (size: 343.0 MiB, <a href="https://challonge.com/2v2ictflockdown">cup bracket</a>)
+                        <span>
+                    </li>
+                    <li>
+                        <time>2019-02-08</time>:
+                        <a href="https://forums.xonotic.org/showthread.php?tid=7955">3v3 iCTF</a> &mdash;
+                        <span class="demo-info">
+                            <a download href="https://demos.regulars.win/cups/2019/2019_ictf_3v3cup.tar.xz">download link</a>
+                            (size: 186.3 MiB, <a href="https://regulars.challonge.com/3v3ctf2019">cup bracket</a>)
+                        </span>
+                    </li>
+                    <li>
+                        <time>2018-04-28</time>:
+                        <a href="https://forums.xonotic.org/showthread.php?tid=7707">XQC #86 (playoff)</a> &mdash;
+                        <span class="demo-info">
+                            <a download href="https://demos.regulars.win/cups/2018/ictf2v2cup_playoff_2018.zip">download link</a>
+                            (size: 199.8 MiB, <a href="https://regulars.challonge.com/playoff_2v2cup_2018">cup bracket</a>)
+                        </span>
+                    </li>
+                    <li>
+                        <time>2018-04-28</time>:
+                        <a href="https://forums.xonotic.org/showthread.php?tid=7707">XQC #86</a> &mdash;
+                        <span class="demo-info">
+                            <a download href="https://demos.regulars.win/cups/2018/ictf2v2cup_swiss.tar.xz">download link</a>
+                            (size: 146.2 MiB, <a href="https://regulars.challonge.com/insta2v2cup_2018">cup bracket</a>)
+                        </span>
+                    </li>
+                    <li>
+                        <time>2016-12-17</time>:
+                        <a href="https://forums.xonotic.org/showthread.php?tid=6827">XQC #82</a> &mdash;
+                        <span class="demo-info">
+                            <a download href="https://demos.regulars.win/cups/2016/winter2016_ctf_cup.tar.xz">download link</a>
+                            (size: 125.9 MiB, <a href="https://regulars.challonge.com/winter2016">cup bracket</a>)
+                        </span>
+                    </li>
+                    <li>
+                        <time>2016-05-28</time>:
+                        <a href="https://forums.xonotic.org/showthread.php?tid=6180">XQC #80</a> &mdash;
+                        <span class="demo-info">
+                            <a download href="https://demos.regulars.win/cups/2016/ictf2v2_cup_2016_05.zip">download link</a>
+                            (size: 372.2 MiB, <a href="https://regulars.challonge.com/2v2cup">cup bracket</a>)
+                        </span>
+                    </li>
+                </ul>
+
                 <h2>Contacts</h2>
                 <ul>
                     <li>
@@ -68,6 +125,20 @@
                 </xon-status>
                 <xon-status data-url="https://api.regulars.win/servers/mars.regulars.win" connect-host="mars.regulars.win:26005" xon-stats-url="http://stats.xonotic.org/server/6037">
                 </xon-status>
+                <!--
+                <h2>Cup Servers</h2>
+                <xon-status data-url="https://api.regulars.win/servers/cup1" connect-host="cup.regulars.win:26050" xon-stats-url="http://stats.xonotic.org/server/5904">
+                </xon-status>
+
+                <xon-status data-url="https://api.regulars.win/servers/cup2" connect-host="cup.regulars.win:26051" xon-stats-url="http://stats.xonotic.org/server/5905">
+                </xon-status>
+
+                <xon-status data-url="https://api.regulars.win/servers/cup3" connect-host="cup.regulars.win:26052" xon-stats-url="http://stats.xonotic.org/server/5907"></xon-status>
+
+                <xon-status data-url="https://api.regulars.win/servers/cup4" connect-host="cup.regulars.win:26053" xon-stats-url="http://stats.xonotic.org/server/5908"></xon-status>
+
+                <xon-status data-url="https://api.regulars.win/servers/cup5" connect-host="cup.regulars.win:26054" xon-stats-url="http://stats.xonotic.org/server/5781"></xon-status>
+                -->
 
                 <h2>Players Graph</h2>
                 <iframe class="grafana-iframe" src="https://grafana.regulars.win/d-solo/tn0trwdik/xonotic-metrics?orgId=1&refresh=5m&from=now-3h&to=now&var-xon_server=All&panelId=2" class="grafana-iframe" frameborder="0"></iframe>

@@ -89,6 +89,14 @@ a {
     background-color: transparent;
 }
 
+a[download]::before {
+    content: '\f56d';
+    font-weight: 400;
+    font-family: 'Font Awesome 5 Free';
+    display: inline-block;
+    padding-right: 0.4em;
+}
+
 a:hover {
     color: #007053;
     text-decoration: underline;
@@ -112,8 +120,25 @@ abbr {
 }
 
 h1, h2, h3, h4, h5, h6 {
-    margin-bottom: 0.6rem;
-    line-height: 1.2;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+}
+
+time {
+    text-decoration: dashed underline;
+}
+
+ul.demo-list {
+    list-style: disk;
+    padding-left: 2.5em;
+    padding-left: clamp(1em, 5vw, 2.5em);
+    text-align: left;
+    line-height: 1.5;
+}
+
+.demo-info {
+    display: inline-block;
 }
 
 .grafana-iframe {
