@@ -1,3 +1,4 @@
+import * as navigationPreload from 'workbox-navigation-preload';
 import { precacheAndRoute, createHandlerBoundToURL } from "workbox-precaching";
 import { registerRoute, NavigationRoute } from "workbox-routing";
 import { StaleWhileRevalidate, CacheFirst } from "workbox-strategies";
@@ -37,6 +38,7 @@ const indexHandler = createHandlerBoundToURL("index.html");
 const navigationRoute = new NavigationRoute(indexHandler, {
 });
 
+navigationPreload.enable();
 registerRoute(navigationRoute);
 
 registerRoute(
@@ -85,6 +87,22 @@ registerRoute(
 );
 
 registerRoute(
+    /^https?:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\//i,
+    new CacheFirst({
+        cacheName: "cdnjs-libs",
+        plugins: [
+            new CacheableResponsePlugin({
+                statuses: [0, 200]
+            }),
+            new ExpirationPlugin({
+                maxAgeSeconds: 365 * 24 * 60 * 60,
+                maxEntries: 50
+            })
+        ]
+    })
+);
+
+registerRoute(
     /^https:\/\/dl.regulars.win\/mapshots\//i,
     new CacheFirst({
         cacheName: "mapshot-cache",
@@ -103,3 +121,10 @@ registerRoute(
         ]
     })
 );
+
+self.addEventListener("message", (evt) => {
+    if (evt.data && evt.data.type === "SKIP_WAITING") {
+        console.log("skip waiting here");
+        self.skipWaiting();
+    }
+});

@@ -4,6 +4,8 @@ import  "./components/mapshot";
 import  "./components/mapshot_tooltip";
 import  "./components/records";
 import  "./components/xon_status";
+import { Workbox, messageSW } from 'workbox-window';
+import { WorkboxLifecycleEvent  } from "workbox-window/utils/WorkboxEvent";
 
 function loadFont(href: string) {
     let link = document.createElement("link");
@@ -26,7 +28,23 @@ function documentReady() {
 
 function documentLoad() {
     if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("/sw.js");
+        const wb = new Workbox("/sw.js");
+
+        // this called when new worker is waiting till old one finished (all tabs is closed)
+        function handleWorkerWaiting(evt: WorkboxLifecycleEvent) {
+            // TODO: maybe show prompt instead of refresh ?
+            wb.addEventListener("controlling", (_evt: WorkboxLifecycleEvent) => {
+                // reload page when new worker took controll
+                window.location.reload();
+            });
+            if (evt.sw) {
+                messageSW(evt.sw, {type: "SKIP_WAITING"});
+            }
+        }
+
+        wb.addEventListener("waiting", handleWorkerWaiting);
+        wb.addEventListener("externalwaiting", handleWorkerWaiting);
+        wb.register();
     }
 }
 

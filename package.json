@@ -7,6 +7,7 @@
     "./src/components/xon_status.ts",
     "./src/components/records.ts",
     "./src/components/mapshot.ts",
+    "./src/components/mapshot_tooltip.ts",
     "./src/components/xon_text.ts"
   ],
   "devDependencies": {
@@ -21,6 +22,7 @@
     "css-loader": "^3.5.2",
     "google-closure-compiler": "^20200406.0.0",
     "html-webpack-plugin": "^4.2.0",
+    "jasmine": "^3.5.0",
     "mini-css-extract-plugin": "^0.9.0",
     "optimize-css-assets-webpack-plugin": "^5.0.3",
     "postcss-loader": "^3.0.0",
@@ -54,6 +56,7 @@
     "workbox-expiration": "^5.1.2",
     "workbox-precaching": "^5.1.2",
     "workbox-routing": "^5.1.2",
-    "workbox-strategies": "^5.1.2"
+    "workbox-strategies": "^5.1.2",
+    "workbox-window": "^5.1.3"
   }
 }
