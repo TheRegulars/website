@@ -33,6 +33,7 @@ nav {
 
 nav > a {
     margin: 0;
+    outline: none;
     color: rgba(255, 255, 255, .6);
     border: 1px solid #374a7f;
     padding: .375em .75em;
@@ -44,10 +45,10 @@ nav > a {
     display: inline-block;
     margin-top: 5px;
     margin-bottom: 5px;
-    transition: color 0.15s ease-in-out,
-                background-color 0.15s ease-in-out,
-                border-color 0.15s ease-in-out,
-                box-shadow 0.15s ease-in-out;
+    transition: color 140ms ease-in-out,
+                background-color 140ms ease-in-out,
+                border-color 140ms ease-in-out,
+                box-shadow 140ms ease-in-out;
 }
 
 nav > a:hover {
@@ -57,7 +58,9 @@ nav > a:hover {
 }
 
 nav > a:focus {
-    box-shadow: 0 0 0.3rem rgba(85, 115, 146, 0.7);
+    color: #fff;
+    box-shadow: 0 0 0.35rem rgba(85, 115, 146, 0.7);
+    text-decoration: none;
 }
 
 nav > a.active {
@@ -77,8 +80,8 @@ main {
 
 footer {
     flex-shrink: 0;
-    margin-top: 15px;
-    margin-bottom: 15px;
+    margin-top: 5px;
+    padding-bottom: 15px;
     text-align: center;
     font-size: .82rem;
 }
@@ -130,7 +133,7 @@ time {
 }
 
 ul.demo-list {
-    list-style: disk;
+    list-style: disc;
     padding-left: 2.5em;
     padding-left: clamp(1em, 5vw, 2.5em);
     text-align: left;
