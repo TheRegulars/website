@@ -36,6 +36,11 @@ wbManifest = wbManifest.concat(precacheMaps.map((mapimg) => {
 precacheAndRoute(wbManifest);
 const indexHandler = createHandlerBoundToURL("index.html");
 const navigationRoute = new NavigationRoute(indexHandler, {
+    allowlist: [
+        /^$/,
+        /^records\/$/i,
+        /^servers\/$/i,
+    ]
 });
 
 navigationPreload.enable();
@@ -124,7 +129,6 @@ registerRoute(
 
 self.addEventListener("message", (evt) => {
     if (evt.data && evt.data.type === "SKIP_WAITING") {
-        console.log("skip waiting here");
         self.skipWaiting();
     }
 });
