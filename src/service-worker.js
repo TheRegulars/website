@@ -47,7 +47,7 @@ navigationPreload.enable();
 registerRoute(navigationRoute);
 
 registerRoute(
-    /^https:\/\/api.regulars.win\/(records|maps)$/i,
+    /^https?:\/\/api.regulars.win\/(records|maps)$/i,
     new StaleWhileRevalidate({
         plugins: [
             new BroadcastUpdatePlugin(),

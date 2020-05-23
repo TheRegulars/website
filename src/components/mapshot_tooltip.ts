@@ -7,6 +7,7 @@ export class MapshotTooltipComponent extends LitElement {
     private _map: string = "";
     private _timeoutId: number | undefined = undefined;
     private _hidden: boolean = true;
+    private _focused: boolean = false;
 
     @property({type: String, hasChanged: (newVal: string, oldVal: string) => {
         return newVal.toLowerCase() !== oldVal.toLowerCase();
@@ -92,14 +93,19 @@ export class MapshotTooltipComponent extends LitElement {
     }
 
     private handleMouseEnter(_evt: MouseEvent) {
+        this._focused = true;
         this.delayedShowMapshot();
     }
 
     private handleMouseLeave(_evt: MouseEvent) {
         this.hideMapshot();
+        this._focused = false;
     }
 
     private handleTouchStart(_evt: TouchEvent) {
+        if (!this._focused) {
+            return;
+        }
         if (!this._hidden) {
             this.hideMapshot();
         } else {
