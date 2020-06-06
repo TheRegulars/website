@@ -1,5 +1,4 @@
 const path = require('path');
-const ClosurePlugin = require('closure-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const ScriptExtHtmlWebpackPlugin = require('script-ext-html-webpack-plugin');
@@ -78,12 +77,6 @@ module.exports = {
     },
     optimization: {
         minimizer: [
-            new ClosurePlugin({mode: 'STANDARD'}, {
-                compilation_level: "SIMPLE",
-                language_in: 'ECMASCRIPT_2018',
-                language_out: 'ES6_STRICT'
-            }),
-            // workbox supports only terser, so let's minize code again ;)
             new Terser({}),
             new OptimizeCssAssetsPlugin({})
         ],
