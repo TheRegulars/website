@@ -28,7 +28,7 @@ module.exports = {
         './src/style.css'
     ],
     output: {
-        filename: "assets/bundle.[hash].js",
+        filename: "assets/[name].bundle.[hash].js",
         path: path.join(__dirname, "dist")
     },
     plugins: [
