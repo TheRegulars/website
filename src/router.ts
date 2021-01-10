@@ -2,7 +2,7 @@
 export class TemplateRouter {
 
     public contentContainer: HTMLElement | null = null;
-    public initialized: boolean = false;
+    public initialized = false;
     public routes: {[key: string]: HTMLTemplateElement} = {};
     public activeLinks: HTMLAnchorElement[] = [];
     public attachedLinks: HTMLAnchorElement[] = [];
@@ -44,11 +44,13 @@ export class TemplateRouter {
     }
 
     public popstateHandler(event: PopStateEvent) {
+        /* eslint-disable */
         const eventState = event.state;
         if (!eventState || eventState.path === undefined) {
             return;
         }
-        this.changeRoute(eventState.path, false);
+        this.changeRoute(eventState.path as string, false);
+        /* eslint-enable */
     }
 
     public clickHandler(event: MouseEvent) {

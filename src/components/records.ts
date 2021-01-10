@@ -10,7 +10,7 @@ interface RecordsApi {
     [map: string]: {
         name: string;
         val: number;
-    }
+    };
 }
 
 @customElement("xon-records")

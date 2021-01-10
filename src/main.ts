@@ -1,11 +1,11 @@
-import { TemplateRouter } from "./router";
-import  "./components/xon_text";
-import  "./components/mapshot";
-import  "./components/mapshot_tooltip";
-import  "./components/records";
-import  "./components/xon_status";
-import { Workbox, messageSW } from 'workbox-window';
+import "./components/xon_text";
+import "./components/mapshot";
+import "./components/mapshot_tooltip";
+import "./components/records";
+import "./components/xon_status";
+import { Workbox, messageSW } from "workbox-window";
 import { WorkboxLifecycleEvent  } from "workbox-window/utils/WorkboxEvent";
+import { TemplateRouter } from "./router";
 
 function loadFont(href: string) {
     let link = document.createElement("link");
@@ -43,7 +43,6 @@ function documentLoad() {
         }
 
         wb.addEventListener("waiting", handleWorkerWaiting);
-        wb.addEventListener("externalwaiting", handleWorkerWaiting);
         wb.register();
     }
 }

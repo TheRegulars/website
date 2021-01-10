@@ -1,3 +1,4 @@
+/* eslint-disable no-bitwise */
 
 export const sRGBd65Profile = [
     0.4124564, 0.3575761, 0.1804375,
@@ -50,14 +51,14 @@ interface dRGBColor {
     r: number;
     g: number;
     b: number;
-};
+}
 
 function rgbTodRGB(rgb: number): dRGBColor {
     return {
         r: ((rgb >> 16) & 255) / 255,
         g: ((rgb >> 8) & 255) / 255,
         b: (rgb & 255) / 255
-    }
+    };
 }
 
 export function clamp(value: number, min: number, max: number): number {
@@ -111,7 +112,7 @@ export function xyzToLab(white: readonly number[], xyz: XYZColor): LABColor {
         l: 116 * pivot(y) - 16,
         a: 500 * (pivot(x) - pivot(y)),
         b: 200 * (pivot(y) - pivot(z))
-    }
+    };
 }
 
 export function labToXYZ(white: readonly number[], lab: LABColor): XYZColor {
@@ -121,8 +122,8 @@ export function labToXYZ(white: readonly number[], lab: LABColor): XYZColor {
     const fy = (l + 16) / 116;
     const fz = fy - b / 200;
     const fx = a / 500 + fy;
-    const fx3 = Math.pow(fx, 3),
-        fz3 = Math.pow(fz, 3);
+    const fx3 = Math.pow(fx, 3);
+    const fz3 = Math.pow(fz, 3);
 
     const xr = (fx3 > epsilon) ? fx3 : (116 * fx - 16) / kappa;
     const yr = (l > kappa * epsilon) ? Math.pow((l + 16) / 116, 3) : l / kappa;
@@ -157,7 +158,7 @@ export function rgbToHSL(rgb: number): HSLColor {
         } else {
             h = 4.0 + gc - rc;
         }
-        h = (h / 6.0) % 1.0
+        h = (h / 6.0) % 1.0;
     }
     return {h: h,s: s, l: l};
 }
@@ -182,7 +183,7 @@ export function hslToRGB(hsl: HSLColor): number {
         return m1;
     }
 
-    if (s == 0.0) {
+    if (s === 0.0) {
         const temp = rgbClamp(Math.round(l * 255));
         return temp << 16 | temp << 8 | temp;
     }

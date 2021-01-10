@@ -1,3 +1,4 @@
+/* eslint-disable */
 declare const MAPSHOT_BASE_URL: string | undefined;
 
 interface NetworkEventMap  {
@@ -13,7 +14,7 @@ interface NetworkInformation {
     readonly type: string | undefined;
     addEventListener<K extends keyof NetworkEventMap>(type: K, listener: (this: NetworkInformation, ev: NetworkEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
     removeEventListener<K extends keyof NetworkEventMap>(type: K, listener: (this: NetworkInformation, ev: NetworkEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
-};
+}
 
 interface Navigator {
     readonly connection: NetworkInformation | undefined;

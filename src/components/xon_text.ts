@@ -5,6 +5,7 @@ import { adjustContrast, rgbClamp } from "../colors";
 const cssRGBre = /rgb\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i;
 
 export function parseCssColor(color: string): undefined | number {
+    /* eslint-disable no-bitwise */
     const match = cssRGBre.exec(color);
     if (!match) {
         return undefined;
@@ -20,6 +21,7 @@ export function parseCssColor(color: string): undefined | number {
 }
 
 function getColorMappingFun(background: number, contrastRatio: number = 4.5): (c: number, d: number) => string {
+    /* eslint-disable no-bitwise */
     const mapFun = adjustContrast(background, contrastRatio);
     return (c: number, defaultColor: number) => {
         if (c === defaultColor) {

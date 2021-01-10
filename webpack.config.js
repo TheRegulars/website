@@ -1,10 +1,9 @@
 const path = require('path');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const ScriptExtHtmlWebpackPlugin = require('script-ext-html-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const OptimizeCssAssetsPlugin = require('optimize-css-assets-webpack-plugin');
+const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const { InjectManifest } = require('workbox-webpack-plugin');
 const { DefinePlugin } = require('webpack');
 const Terser = require('terser-webpack-plugin');
@@ -28,7 +27,7 @@ module.exports = {
         './src/style.css'
     ],
     output: {
-        filename: "assets/[name].bundle.[hash].js",
+        filename: "assets/[name].bundle.[fullhash].js",
         path: path.join(__dirname, "dist")
     },
     plugins: [
@@ -36,25 +35,27 @@ module.exports = {
         new DefinePlugin({
             MAPSHOT_BASE_URL: JSON.stringify("https://dl.regulars.win/mapshots/")
         }),
-        new CopyPlugin([
-            { from: 'static/favicon.ico', to: 'favicon.ico'},
-            { from: 'static/favicon-192x192.png', to: 'images/favicon-192x192.png'},
-            { from: 'static/favicon-96x96.png', to: 'images/favicon-96x96.png'},
-            { from: 'static/apple-touch-icon.png', to: 'images/apple-touch-icon.png'},
-            { from: 'static/images/', to: 'images/'},
-            { from: 'static/fonts/', to: 'fonts/'},
-            { from: 'static/robots.txt', to: 'robots.txt'},
-            { from: 'static/sitemap.xml', to: 'sitemap.xml'},
-            { from: 'static/manifest.json', to: 'manifest.webmanifest'}
-        ]),
+        new CopyPlugin({
+            patterns: [
+                { from: 'static/favicon.ico', to: 'favicon.ico'},
+                { from: 'static/favicon-192x192.png', to: 'images/favicon-192x192.png'},
+                { from: 'static/favicon-96x96.png', to: 'images/favicon-96x96.png'},
+                { from: 'static/apple-touch-icon.png', to: 'images/apple-touch-icon.png'},
+                { from: 'static/images/', to: 'images/'},
+                { from: 'static/fonts/', to: 'fonts/'},
+                { from: 'static/robots.txt', to: 'robots.txt'},
+                { from: 'static/sitemap.xml', to: 'sitemap.xml'},
+                { from: 'static/manifest.json', to: 'manifest.webmanifest'}
+            ]
+        }),
         new HtmlWebpackPlugin({
             minify: htmlMinifyOpts,
             template: 'html/index.html',
-            filename: 'index.html'
+            filename: 'index.html',
+            scriptLoading: 'defer'
         }),
-        new ScriptExtHtmlWebpackPlugin({defaultAttribute: 'async'}),
         new MiniCssExtractPlugin({
-            filename: 'assets/style.[hash].css'
+            filename: 'assets/style.[chunkhash].css'
         }),
         new InjectManifest({
             swSrc: './src/service-worker.js',
@@ -71,14 +72,16 @@ module.exports = {
     },
     devtool: "source-map",
     devServer: {
-        contentBase: path.join(__dirname, "dist"),
+        static: {
+            directory: path.join(__dirname, "dist"),
+        },
         port: 9000,
         historyApiFallback: true,
     },
     optimization: {
         minimizer: [
             new Terser({}),
-            new OptimizeCssAssetsPlugin({})
+            new CssMinimizerPlugin()
         ],
     },
     mode: webpackMode,
