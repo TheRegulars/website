@@ -43,7 +43,6 @@ function documentLoad() {
         }
 
         wb.addEventListener("waiting", handleWorkerWaiting);
-        wb.addEventListener("externalwaiting", handleWorkerWaiting);
         wb.register();
     }
 }
