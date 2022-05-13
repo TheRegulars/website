@@ -231,10 +231,17 @@ def generate_mapshots(pk3_filepath, upload_callback):
                             img = img.convert('RGB')
 
                         mapshot_filename = "{mapname}.jpg".format(mapname=mapname)
-                        img.save(output_image, format='JPEG', optimize=True, quality=82)
+                        img.save(output_image, format='JPEG', optimize=True, quality=80)
 
                     logger.info("Uploading %r, from pk3: %s", mapshot_filename, pk3_filepath)
                     output_image.seek(0, io.SEEK_SET)  # reset buffer to start
+                    upload_callback(mapshot_filename, output_image)
+
+                with io.BytesIO() as output_image:
+                    mapshot_filename = "{mapname}.webp".format(mapname=mapname)
+                    img.save(output_image, format='WEBP', method=6, quality=80)
+                    output_image.seek(0, io.SEEK_SET)
+                    logger.info("Uploading %r, from pk3: %s", mapshot_filename, pk3_filepath)
                     upload_callback(mapshot_filename, output_image)
 
 
