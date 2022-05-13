@@ -14,6 +14,9 @@ import urllib.parse
 import PIL
 import shutil
 import os
+from concurrent.futures import ThreadPoolExecutor
+import concurrent.futures
+import threading
 
 
 MAP_NAME_RE = re.compile("^maps/(?P<mapname>[^\/]+)\.bsp$", re.I)
@@ -38,6 +41,7 @@ class BaseMapStorage:
     def __init__(self, url):
         self.url = urllib.parse.urlparse(url)
         self.basepath = os.path.abspath(self.url.path)
+        self.url_str = url
 
     def filepath(self, filename):
         res = os.path.join(self.basepath, filename)
@@ -89,7 +93,7 @@ class S3MapshotStorage(BaseMapStorage):
 
     def __init__(self, url):
         try:
-            self.url = urllib.parse.urlparse(url)
+            super().__init__(url)
         except ValueError:
             raise ValueError("Invalid S3 URL: %r" % url)
 
@@ -101,7 +105,7 @@ class S3MapshotStorage(BaseMapStorage):
 
         self.s3 = boto3.resource('s3')
         self.bucket = self.s3.Bucket(self.url.netloc)
-        self.prefix = self.url.path
+        self.prefix = self.basepath
         if self.prefix.startswith("/"):
             self.prefix = self.prefix[1:]
 
@@ -117,6 +121,9 @@ class S3MapshotStorage(BaseMapStorage):
         self.remove_many([filename])
 
     def remove_many(self, filenames):
+        if not filenames:
+            return
+
         objs = [{'Key': self.filepath(f)} for f in filenames]
         resp = self.bucket.delete_objects(Delete={'Objects': objs, 'Quiet': True})
         assert resp['ResponseMetadata']['HTTPStatusCode'] == 200
@@ -246,29 +253,70 @@ def generate_mapshots(pk3_filepath, upload_callback):
 
 
 def main():
+    log_levels = ['critical', 'error', 'warning', 'warn', 'info', 'debug']
     parser = argparse.ArgumentParser(description='Mapshot uploader')
     parser.add_argument('-d', '--path', help='datadir path', type=str, nargs='+', required=True)
-    parser.add_argument('--upload-path', help='Filepath or S3 upload url', type=open_storage, required=True)
+    parser.add_argument('--upload-path', help='Filepath or S3 upload url', type=open_storage,
+                        required=True)
     parser.add_argument('--cleanup', help='Remove old mapshots', action='store_true')
+    parser.add_argument('-t', '--threads', help='Number of threads to use', type=int,
+                        default=min(16, os.cpu_count() + 2))
+    parser.add_argument('-l', '--log-level', type=lambda x: str(x).lower(), choices=log_levels,
+                        default='warn')
     args = parser.parse_args()
+
+    logging.basicConfig(level=getattr(logging, args.log_level.upper()), format='%(message)s')
 
     if args.cleanup:
         current_objects = set(args.upload_path.list())
 
-    def upload_callback(filename, fileobj):
-        args.upload_path.upload(filename, fileobj)
+    loc_storage = threading.local()
 
-        if args.cleanup:
-            current_objects.discard(filename)
+    def thread_local_storage():
+        try:
+            return loc_storage.storage
+        except AttributeError:
+            storage = open_storage(args.upload_path.url_str)
+            loc_storage.storage = storage
+            return storage
 
-    for path in args.path:
-        for obj in Path(path).iterdir():
-            # TODO: pk3dir
-            if obj.suffix == '.pk3' and obj.is_file():
-                try:
-                    generate_mapshots(str(obj), upload_callback)
-                except zipfile.BadZipFile:
-                    logger.warning("Bad zip file: %r", obj)
+    def process_pk3(filename):
+        try:
+            storage = thread_local_storage()
+
+            def upload_callback(filename, fileobj):
+                storage.upload(filename, fileobj)
+                if args.cleanup:
+                    # TODO: this could require lock for some python implementations
+                    # it's safe with GIL
+                    current_objects.discard(filename)
+
+            try:
+                generate_mapshots(filename, upload_callback)
+            except zipfile.BadZipFile:
+                logger.warning("Bad zip file: %r", obj)
+        except:
+            logger.exception("Task failed:")
+            raise
+
+    with ThreadPoolExecutor(max_workers=args.threads, thread_name_prefix="worker-") as executor:
+        tasks = []
+        try:
+            for path in args.path:
+                for obj in Path(path).iterdir():
+                    # TODO: pk3dir
+                    if obj.suffix == '.pk3' and obj.is_file():
+                        task = executor.submit(process_pk3, filename=str(obj))
+                        tasks.append(task)
+
+            concurrent.futures.wait(tasks, return_when=concurrent.futures.ALL_COMPLETED)
+            for task in tasks:
+                # call this to check exceptions
+                task.result()
+        except:
+            for task in tasks:
+                task.cancel()
+            raise
 
     if args.cleanup:
         args.upload_path.remove_many(list(current_objects))
