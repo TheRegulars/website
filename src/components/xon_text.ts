@@ -38,14 +38,25 @@ function getColorMappingFun(background: number, contrastRatio: number = 4.5): (c
 
 @customElement("xon-text")
 export class XonTextComponent extends LitElement {
+    private static readonly contrastRatio: number = 2.25;
     @property ({type: String}) public text = "";
     // recommended contrast ratio is 4.5 but it changes some colors too much
-    private static readonly contrastRatio: number = 2.25;
     private _colorMappingFunction: undefined | ((c: number, d: number) => string) = undefined;
     private _prevBackground: undefined | string = undefined;
 
+    public connectedCallback() {
+        super.connectedCallback();
+        this.updateBackgroundFun();
+    }
+
+    public render() {
+        this.updateBackgroundFun();
+        const mapFunc = (this._colorMappingFunction) ? this._colorMappingFunction : dpcolorStyle;
+        return dptextDOM(this.text, 0xfff, mapFunc);
+    }
+
     private backgroundColor(): undefined | string {
-        const prop = window.getComputedStyle(document.body).getPropertyValue('background-color');
+        const prop = window.getComputedStyle(document.body).getPropertyValue("background-color");
         return (prop) ? prop : undefined;
     }
 
@@ -61,16 +72,5 @@ export class XonTextComponent extends LitElement {
                 this._colorMappingFunction = getColorMappingFun(parsedBackground, XonTextComponent.contrastRatio);
             }
         }
-    }
-
-    public connectedCallback() {
-        super.connectedCallback();
-        this.updateBackgroundFun();
-    }
-
-    public render() {
-        this.updateBackgroundFun();
-        const mapFunc = (this._colorMappingFunction) ? this._colorMappingFunction : dpcolorStyle;
-        return dptextDOM(this.text, 0xfff, mapFunc);
     }
 }

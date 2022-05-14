@@ -9,23 +9,13 @@ export class MapshotTooltipComponent extends LitElement {
     private _hidden: boolean = true;
     private _focused: boolean = false;
 
-    @property({type: String, hasChanged: (newVal: string, oldVal: string) => {
-        return newVal.toLowerCase() !== oldVal.toLowerCase();
-    }})
-    public get map(): string {
-        return this._map;
-    }
-    public set map(value: string) {
-        const oldValue = this.map;
-        if (this._mapshotCache && oldValue.toLocaleUpperCase() !== value.toLowerCase()) {
-            this._mapshotCache.removeEventListener("load", this.handleLoad);
-            this._mapshotCache = undefined;
-        }
-        this._map = value;
-        this.requestUpdate('map', oldValue);
+    constructor() {
+        super();
+        // TODO: get rid from bind
+        this.handleLoad = this.handleLoad.bind(this);
     }
 
-    static get styles() {
+    public static get styles() {
         return css`
             :host {
                 display: inline-block;
@@ -81,36 +71,20 @@ export class MapshotTooltipComponent extends LitElement {
         `;
     }
 
-    constructor() {
-        super();
-        this.handleLoad = this.handleLoad.bind(this);
+    @property({type: String, hasChanged: (newVal: string, oldVal: string) => {
+        return newVal.toLowerCase() !== oldVal.toLowerCase();
+    }})
+    public get map(): string {
+        return this._map;
     }
-
-    private handleLoad(_evt: Event) {
-        if (this._mapshotCache) {
-            this.requestUpdate();
+    public set map(value: string) {
+        const oldValue = this.map;
+        if (this._mapshotCache && oldValue.toLocaleUpperCase() !== value.toLowerCase()) {
+            this._mapshotCache.removeEventListener("load", this.handleLoad);
+            this._mapshotCache = undefined;
         }
-    }
-
-    private handleMouseEnter(_evt: MouseEvent) {
-        this._focused = true;
-        this.delayedShowMapshot();
-    }
-
-    private handleMouseLeave(_evt: MouseEvent) {
-        this.hideMapshot();
-        this._focused = false;
-    }
-
-    private handleTouchStart(_evt: TouchEvent) {
-        if (!this._focused) {
-            return;
-        }
-        if (!this._hidden) {
-            this.hideMapshot();
-        } else {
-            this.showMapshot();
-        }
+        this._map = value;
+        this.requestUpdate("map", oldValue);
     }
 
     public delayedShowMapshot(timeout: number = 260) {
@@ -150,4 +124,30 @@ export class MapshotTooltipComponent extends LitElement {
         <div><span @mouseenter=${this.handleMouseEnter} @mouseleave=${this.handleMouseLeave}
         @touchstart=${this.handleTouchStart}> ${this.map}</span>${mapshot}</div>`;
     }
+    private handleLoad = (_evt: Event) => {
+        if (this._mapshotCache) {
+            this.requestUpdate();
+        }
+    };
+
+    private handleMouseEnter = (_evt: MouseEvent) => {
+        this._focused = true;
+        this.delayedShowMapshot();
+    };
+
+    private handleMouseLeave = (_evt: MouseEvent) => {
+        this.hideMapshot();
+        this._focused = false;
+    };
+
+    private handleTouchStart = (_evt: TouchEvent) => {
+        if (!this._focused) {
+            return;
+        }
+        if (!this._hidden) {
+            this.hideMapshot();
+        } else {
+            this.showMapshot();
+        }
+    };
 }

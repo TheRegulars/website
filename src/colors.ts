@@ -81,7 +81,7 @@ export function rgbToXYZWithProfile(profile: readonly number[], rgb: number): XY
         x: profile[0] * r + profile[1] * g + profile[2] * b,
         y: profile[3] * r + profile[4] * g + profile[5] * b,
         z: profile[6] * r + profile[7] * g + profile[8] * b
-    }
+    };
 }
 
 export function xyzToRGBWithProfile(invProfile: readonly number[], xyz: XYZColor): number {
@@ -132,18 +132,18 @@ export function labToXYZ(white: readonly number[], lab: LABColor): XYZColor {
         x: xr * white[0],
         y: yr * white[1],
         z: zr * white[2]
-    }
+    };
 }
 
 export function rgbToHSL(rgb: number): HSLColor {
     const {r, g, b} = rgbTodRGB(rgb);
-    const max = Math.max(r, g, b),
-        min = Math.min(r, g, b);
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
 
     let h: number, s: number, l: number;
     l = (max + min) / 2;
-    if (max == min) {
-        //achromatic
+    if (max === min) {
+        // achromatic
         h = s = 0;
     } else {
         const delta = (max - min);
@@ -151,9 +151,9 @@ export function rgbToHSL(rgb: number): HSLColor {
         const rc = (max - r) / delta;
         const gc = (max - g) / delta;
         const bc = (max - b) / delta;
-        if (r == max) {
-            h = bc - gc
-        } else if (g == max) {
+        if (r === max) {
+            h = bc - gc;
+        } else if (g === max) {
             h = 2.0 + rc - bc;
         } else {
             h = 4.0 + gc - rc;
@@ -164,6 +164,7 @@ export function rgbToHSL(rgb: number): HSLColor {
 }
 
 export function hslToRGB(hsl: HSLColor): number {
+    /* eslint-disable @typescript-eslint/no-shadow */
     const {h, s, l} = hsl;
 
     function pivot(m1: number, m2: number, hue: number): number {
@@ -200,13 +201,13 @@ export function hslToRGB(hsl: HSLColor): number {
 
 
 export function rgbToLab(rgb: number, profile: readonly number[] = sRGBd65Profile,
-                  white: readonly number[] = d65WhiteRef): LABColor {
+                         white: readonly number[] = d65WhiteRef): LABColor {
 
     return xyzToLab(white, rgbToXYZWithProfile(profile, rgb));
 }
 
 export function labToRgb(lab: LABColor, invProfile: readonly number[] = sRGBd65InvProfile,
-                  white: readonly number[] = d65WhiteRef): number {
+                         white: readonly number[] = d65WhiteRef): number {
 
     return xyzToRGBWithProfile(invProfile, labToXYZ(white, lab));
 }

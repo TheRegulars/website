@@ -38,8 +38,15 @@ function getConnection(): NetworkInformation | undefined {
 @customElement("xon-status")
 export class StatusComponent extends LitElement {
 
-    static goodConnectionRefreshInterval: number = 20;
-    static badConnectionRefreshInterval: number = 120;
+    private static goodConnectionRefreshInterval: number = 20;
+    private static badConnectionRefreshInterval: number = 120;
+
+    @property({type: Object}) public serverStatus: XonServerStatus | undefined = undefined;
+    @property({type: String}) public connectHost: string = "";
+    @property({type: String}) public xonStatsUrl: string = "";
+    @property({type: Object}) public lastRequestedDate: Date | undefined;
+    @property({type: Object}) public lastLoadedDate: Date | undefined;
+
     private _connectionHandler: (evt: Event) => void;
     private _visibilityHandler: (evt: Event) => void;
     private _loaded = false;
@@ -47,184 +54,17 @@ export class StatusComponent extends LitElement {
     private _dataUrl: string = "";
     private _timerId: number | undefined = undefined;
 
-    @property({type: Object}) public serverStatus: XonServerStatus | undefined = undefined;
-    @property({type: String}) public connectHost: string = "";
-    @property({type: String}) public xonStatsUrl: string = "";
-
-    @property({type: Object}) public lastRequestedDate: Date | undefined;
-    @property({type: Object}) public lastLoadedDate: Date | undefined;
-
-    @property({type: Number})
-    public get refreshInterval() {
-        const connection = getConnection();
-
-        if (!connection) {
-            return StatusComponent.goodConnectionRefreshInterval;
-        } else if (connection.saveData || connection.effectiveType === 'slow-2g' ||
-                   connection.effectiveType === '2g' || connection.effectiveType === '3g' ||
-                   (connection.downlink && connection.downlink < 0.5)) {
-            return StatusComponent.badConnectionRefreshInterval;
-        } else {
-            return StatusComponent.goodConnectionRefreshInterval;
-        }
-    }
     constructor() {
         super();
         this._visibilityHandler = this.visiblityChanged.bind(this);
         this._connectionHandler = this.connectionChanged.bind(this);
     }
 
-    @property({type: String})
-    public get dataUrl() {
-        return this._dataUrl;
-    }
-
-    public set dataUrl(value: string) {
-        const oldValue = this.dataUrl;
-        this._dataUrl = value;
-        this.setLoaded(false);
-        if (value) {
-            this.loadData();
-        }
-        this.requestUpdate('dataUrl', oldValue);
-    }
-
-    @property({type: Boolean})
-    public get visible() {
-        if (typeof document.visibilityState !== "undefined") {
-            return document.visibilityState != "hidden";
-        } else {
-            return true;
-        }
-    }
-
-    @property({type: Boolean})
-    public get loaded() {
-        return this._loaded;
-    }
-
-    private setLoaded(val: boolean) {
-        const oldVal = this.loaded;
-        if (oldVal !== val) {
-            this._loaded = val;
-            this.requestUpdate("loaded", oldVal);
-        }
-    }
-
-    @property({type: Boolean})
-    public get autoRefresh() {
-        return this._autorefresh;
-    }
-
-    static get observedAttributes() {
+    public static get observedAttributes() {
         return super.observedAttributes.concat(["data-url", "connect-host", "xon-stats-url"]);
     }
 
-    public attributeChangedCallback(name: string, oldValue: string, newValue: string) {
-        if (name === "data-url") {
-            this.dataUrl = newValue;
-        } else if (name === "connect-host") {
-            this.connectHost = newValue;
-        } else if (name === "xon-stats-url") {
-            this.xonStatsUrl = newValue;
-        }
-        super.attributeChangedCallback(name, oldValue, newValue);
-    }
-
-    private enableAutoRefresh() {
-        this._autorefresh = true;
-        this._timerId = window.setInterval(this.reloadData.bind(this), this.refreshInterval * 1000);
-    }
-
-    private disableAutoRefresh() {
-        if (this._timerId !== undefined) {
-            window.clearInterval(this._timerId);
-        }
-        this._autorefresh = false;
-    }
-    private updateAutoRefresh() {
-        if (!this.visible || navigator.onLine === false) {
-            this.disableAutoRefresh();
-        } else {
-            if (this.autoRefresh) {
-                this.disableAutoRefresh();
-                this.enableAutoRefresh();
-            } else {
-                this.enableAutoRefresh();
-            }
-            if (this.lastRequestedDate) {
-                const currentDate = new Date();
-                const diff = currentDate.getTime() - this.lastRequestedDate.getTime();
-                if (diff > (this.refreshInterval * 1000)) {
-                    // request early update
-                    this.reloadData();
-                }
-            }
-        }
-    }
-    // called when internet connection have changed
-    private connectionChanged(_evt: Event) {
-        this.updateAutoRefresh();
-    }
-
-    private visiblityChanged(_evt: Event) {
-        this.updateAutoRefresh();
-    }
-
-    public connectedCallback() {
-        super.connectedCallback();
-        const connection = getConnection();
-
-        // listen for connection changes
-        if (connection && connection.addEventListener) {
-            connection.addEventListener("change", this._connectionHandler);
-        }
-
-        // listen for visiblity changes
-        if (typeof document.hidden !== "undefined") {
-            document.addEventListener("visibilitychange", this._visibilityHandler);
-        }
-
-        // enable auto refresh if tab is visible
-        if (this.visible && navigator.onLine !== false) {
-            this.enableAutoRefresh();
-        }
-    }
-
-    public disconnectedCallback() {
-        super.disconnectedCallback();
-        const connection = getConnection();
-        if (connection && connection.addEventListener) {
-            connection.removeEventListener("change", this._connectionHandler);
-        }
-        if (this._visibilityHandler) {
-            document.removeEventListener("visibilitychange", this._visibilityHandler);
-        }
-        // disable auto refresh if it was enabled
-        this.disableAutoRefresh();
-    }
-
-    public loadData() {
-        this.lastRequestedDate = new Date();
-        fetch(this.dataUrl).then((resp) => {
-            if (!resp.ok) {
-                throw Error(resp.statusText);
-            }
-            return resp.json();
-        }).then((data) => {
-            this.serverStatus = data;
-            this.setLoaded(true);
-            this.lastLoadedDate = new Date();
-        }).catch((err) => {
-            console.log("Failed to load data", err);
-        });
-    }
-
-    public reloadData() {
-        this.loadData();
-    }
-
-    static get styles() {
+    public static get styles() {
         return css`
         :host {
             font-family: Xolonium, sans-serif;
@@ -403,7 +243,204 @@ export class StatusComponent extends LitElement {
                 font-size: 0.76em;
             }
         }
-        `
+        `;
+    }
+
+    @property({type: Number})
+    public get refreshInterval() {
+        const connection = getConnection();
+
+        if (!connection) {
+            return StatusComponent.goodConnectionRefreshInterval;
+        } else if (connection.saveData || connection.effectiveType === "slow-2g" ||
+                   connection.effectiveType === "2g" || connection.effectiveType === "3g" ||
+                   (connection.downlink && connection.downlink < 0.5)) {
+            return StatusComponent.badConnectionRefreshInterval;
+        } else {
+            return StatusComponent.goodConnectionRefreshInterval;
+        }
+    }
+    @property({type: Boolean})
+    public get loaded() {
+        return this._loaded;
+    }
+
+    @property({type: Boolean})
+    public get visible() {
+        if (typeof document.visibilityState !== "undefined") {
+            return document.visibilityState !== "hidden";
+        } else {
+            return true;
+        }
+    }
+
+    @property({type: Boolean})
+    public get autoRefresh() {
+        return this._autorefresh;
+    }
+
+    @property({type: String})
+    public get dataUrl() {
+        return this._dataUrl;
+    }
+
+    public set dataUrl(value: string) {
+        const oldValue = this.dataUrl;
+        this._dataUrl = value;
+        this.setLoaded(false);
+        if (value) {
+            this.loadData();
+        }
+        this.requestUpdate("dataUrl", oldValue);
+    }
+
+    public connectedCallback() {
+        super.connectedCallback();
+        const connection = getConnection();
+
+        // listen for connection changes
+        if (connection && connection.addEventListener) {
+            connection.addEventListener("change", this._connectionHandler);
+        }
+
+        // listen for visiblity changes
+        if (typeof document.hidden !== "undefined") {
+            document.addEventListener("visibilitychange", this._visibilityHandler);
+        }
+
+        // enable auto refresh if tab is visible
+        if (this.visible && navigator.onLine !== false) {
+            this.enableAutoRefresh();
+        }
+    }
+
+    public disconnectedCallback() {
+        super.disconnectedCallback();
+        const connection = getConnection();
+        if (connection && connection.addEventListener) {
+            connection.removeEventListener("change", this._connectionHandler);
+        }
+        if (this._visibilityHandler) {
+            document.removeEventListener("visibilitychange", this._visibilityHandler);
+        }
+        // disable auto refresh if it was enabled
+        this.disableAutoRefresh();
+    }
+
+    public loadData() {
+        this.lastRequestedDate = new Date();
+        fetch(this.dataUrl).then((resp) => {
+            if (!resp.ok) {
+                throw Error(resp.statusText);
+            }
+            return resp.json();
+        }).then((data: XonServerStatus) => {
+            this.serverStatus = data;
+            this.setLoaded(true);
+            this.lastLoadedDate = new Date();
+        }).catch((err) => {
+            console.log("Failed to load data", err);
+        });
+    }
+
+    public reloadData() {
+        this.loadData();
+    }
+
+    public attributeChangedCallback(name: string, oldValue: string, newValue: string) {
+        if (name === "data-url") {
+            this.dataUrl = newValue;
+        } else if (name === "connect-host") {
+            this.connectHost = newValue;
+        } else if (name === "xon-stats-url") {
+            this.xonStatsUrl = newValue;
+        }
+        super.attributeChangedCallback(name, oldValue, newValue);
+    }
+
+    public render() {
+        if (!this.loaded || !this.serverStatus) {
+            return html`<p>Status</p>`;
+        }
+        const statsUrl = this.xonStatsUrl ? html` (<a href=${this.xonStatsUrl}>stats</a>)`: html``;
+        return html`
+        <div class="status">
+        <h1>${this.serverStatus?.host}</h1>
+        <div class="server-info">
+        <table class="server-params">
+        <tbody>
+            <tr>
+                <td>Server:</td>
+                <td class="server-item"><code class="server">${this.connectHost}</code> ${statsUrl}</td>
+            </tr>
+            <tr>
+                    <td>Players:</td>
+                    <td>${this.serverStatus?.players_count}/${this.serverStatus?.players_max}</td>
+            </tr>
+            <tr>
+                <td>Public:</td>
+                <td>${this.serverStatus?.sv_public === 1 ? html`Yes`: html`No`}</td>
+            </tr>
+            ${this.renderPerformance()}
+        </tbody>
+        </table>
+        <div class="mapinfo">
+            <div>
+                Map: <span class="map-name">${this.serverStatus?.map}</span>
+            </div>
+            <xon-mapshot map="${this.serverStatus.map}"></xon-mapshot>
+        </div>
+        </div>
+        ${this.renderPlayers()}
+        </div>`;
+    }
+
+    private setLoaded(val: boolean) {
+        const oldVal = this.loaded;
+        if (oldVal !== val) {
+            this._loaded = val;
+            this.requestUpdate("loaded", oldVal);
+        }
+    }
+
+    private enableAutoRefresh() {
+        this._autorefresh = true;
+        this._timerId = window.setInterval(this.reloadData.bind(this), this.refreshInterval * 1000);
+    }
+
+    private disableAutoRefresh() {
+        if (this._timerId !== undefined) {
+            window.clearInterval(this._timerId);
+        }
+        this._autorefresh = false;
+    }
+    private updateAutoRefresh() {
+        if (!this.visible || navigator.onLine === false) {
+            this.disableAutoRefresh();
+        } else {
+            if (this.autoRefresh) {
+                this.disableAutoRefresh();
+                this.enableAutoRefresh();
+            } else {
+                this.enableAutoRefresh();
+            }
+            if (this.lastRequestedDate) {
+                const currentDate = new Date();
+                const diff = currentDate.getTime() - this.lastRequestedDate.getTime();
+                if (diff > (this.refreshInterval * 1000)) {
+                    // request early update
+                    this.reloadData();
+                }
+            }
+        }
+    }
+    // called when internet connection have changed
+    private connectionChanged(_evt: Event) {
+        this.updateAutoRefresh();
+    }
+
+    private visiblityChanged(_evt: Event) {
+        this.updateAutoRefresh();
     }
 
     private renderPlayers() {
@@ -437,17 +474,17 @@ export class StatusComponent extends LitElement {
                         <td class="col-slot">${player.no}</td>
                         <td class="col-player"><xon-text text=${player.name}></xon-text></td>
                         <td class="col-ping">${player.is_bot ?
-                            html`<span class="bot">bot</span>`:
-                            player.ping}
+        html`<span class="bot">bot</span>`:
+        player.ping}
                         </td>
                         <td class="col-pl">${player.pl}</td>
                         <td class="col-time">${player.time}</td>
-                        <td class="col-score">${player.frags == -666 ?
-                                html`<span class="spectator">spectator</span>`:
-                                html`<span class="frags">${player.frags}</span>`}
+                        <td class="col-score">${player.frags === -666 ?
+        html`<span class="spectator">spectator</span>`:
+        html`<span class="frags">${player.frags}</span>`}
                         </td>
                     </tr>`
-                 )}
+    )}
                 </tbody>
             </table>
         `;
@@ -494,45 +531,5 @@ export class StatusComponent extends LitElement {
             <tr>
                 <td>Stddev offset:</td><td><span class=${metricClass(offsetSdev, 0.8, 1.2)}>${offsetAvg} ms</span></td>
             </tr>`;
-    }
-
-    public render() {
-        if (!this.loaded || !this.serverStatus) {
-            return html`<p>Status</p>`;
-        }
-        const statsUrl = this.xonStatsUrl ?
-            html` (<a href=${this.xonStatsUrl}>stats</a>)`:
-            html``;
-                //<li>Performance: ${this.renderPerformance()}</li>
-        return html`
-        <div class="status">
-        <h1>${this.serverStatus?.host}</h1>
-        <div class="server-info">
-        <table class="server-params">
-        <tbody>
-            <tr>
-                <td>Server:</td>
-                <td class="server-item"><code class="server">${this.connectHost}</code> ${statsUrl}</td>
-            </tr>
-            <tr>
-                    <td>Players:</td>
-                    <td>${this.serverStatus?.players_count}/${this.serverStatus?.players_max}</td>
-            </tr>
-            <tr>
-                <td>Public:</td>
-                <td>${this.serverStatus?.sv_public === 1 ? html`Yes`: html`No`}</td>
-            </tr>
-            ${this.renderPerformance()}
-        </tbody>
-        </table>
-        <div class="mapinfo">
-            <div>
-                Map: <span class="map-name">${this.serverStatus?.map}</span>
-            </div>
-            <xon-mapshot map="${this.serverStatus.map}"></xon-mapshot>
-        </div>
-        </div>
-        ${this.renderPlayers()}
-        </div>`;
     }
 }

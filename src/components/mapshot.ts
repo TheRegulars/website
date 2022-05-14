@@ -9,6 +9,19 @@ export class MapshotComponent extends LitElement {
 
     private _map: string = "";
 
+    public static get styles() {
+        return css`
+        :host {
+            display: block;
+        }
+        img {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+        }
+        `;
+    }
+
     @property({type: String, hasChanged: (newVal: string, oldVal: string) => {
         return newVal.toLowerCase() !== oldVal.toLowerCase();
     }})
@@ -24,20 +37,15 @@ export class MapshotComponent extends LitElement {
             // load image eagerly
             this.loadImage();
         }
-        this.requestUpdate('map', oldValue);
+        this.requestUpdate("map", oldValue);
     }
 
-    static get styles() {
-        return css`
-        :host {
-            display: block;
+    public render() {
+        if (!this.loaded) {
+            return html`<div>loading...</div>`;
+        } else {
+            return html`${this.imgDOM}`;
         }
-        img {
-            width: 100%;
-            height: auto;
-            object-fit: contain;
-        }
-        `;
     }
 
     private mapshotURL(ext: string = "png"): string {
@@ -63,7 +71,7 @@ export class MapshotComponent extends LitElement {
         if (!this.map) {
             return;
         }
-        let pngImg = new Image(); 
+        let pngImg = new Image();
         let jpgImg = new Image();
         let missingImg = new Image();
         pngImg.src = this.mapshotURL("png");
@@ -81,7 +89,7 @@ export class MapshotComponent extends LitElement {
             // cancel jpg loading
             jpgImg.src = "";
             this.imageLoaded(img, false);
-            jpgPromise.catch(() => {}); // ignore jpg
+            jpgPromise.catch(() => void 0); // ignore jpg
         }).catch(() => {
             jpgPromise.then((img) => {
                 this.imageLoaded(img, false);
@@ -89,14 +97,6 @@ export class MapshotComponent extends LitElement {
                 this.imageLoaded(missingImg, true);
             });
         });
-    }
-
-    public render() {
-        if (!this.loaded) {
-            return html`<div>loading...</div>`;
-        } else {
-            return html`${this.imgDOM}`;
-        }
     }
 }
 

@@ -18,7 +18,6 @@ module.exports = {
         "eslint-plugin-prefer-arrow",
         "eslint-plugin-import",
         "@typescript-eslint",
-        "@typescript-eslint/tslint"
     ],
     "rules": {
         "@typescript-eslint/adjacent-overload-signatures": "error",
@@ -59,7 +58,8 @@ module.exports = {
         "@typescript-eslint/explicit-member-accessibility": [
             "error",
             {
-                "accessibility": "explicit"
+                "accessibility": "explicit",
+                "overrides": {"constructors": "no-public"}
             }
         ],
         "@typescript-eslint/indent": [
@@ -88,8 +88,37 @@ module.exports = {
                 }
             }
         ],
-        "@typescript-eslint/member-ordering": "error",
-        "@typescript-eslint/naming-convention": "error",
+        "@typescript-eslint/member-ordering": ["error", {"default": [
+            "signature",
+            "public-static-field",
+            "protected-static-field",
+            "private-static-field",
+            "public-field",
+            "protected-field",
+            "private-field",
+            "field",
+            "public-constructor",
+            "protected-constructor",
+            "private-constructor",
+            "constructor",
+            ["public-static-get", "public-static-set"],
+            ["protected-static-get", "protected-static-set"],
+            ["private-static-get", "private-static-set"],
+            ["public-get", "public-set"],
+            ["protected-get", "protected-set"],
+            ["private-get", "private-set"],
+            ["get", "set"],
+            "public-static-method",
+            "protected-static-method",
+            "private-static-method",
+            "public-method",
+            "protected-method",
+            "private-method",
+            "method"
+        ]}],
+        "@typescript-eslint/naming-convention": ["error",
+            {"selector": "function","format": ["PascalCase", "camelCase"]}
+        ],
         "@typescript-eslint/no-empty-function": "error",
         "@typescript-eslint/no-empty-interface": "error",
         "@typescript-eslint/no-explicit-any": "off",
@@ -97,7 +126,9 @@ module.exports = {
         "@typescript-eslint/no-namespace": "error",
         "@typescript-eslint/no-parameter-properties": "off",
         "@typescript-eslint/no-floating-promises": "warn",
-        "@typescript-eslint/no-unused-vars": ["warn", {vars: "local", "varsIgnorePattern": "^_"}],
+        "@typescript-eslint/no-unused-vars": ["warn", {
+            "vars": "local", "varsIgnorePattern": "^_", "args": "all", "argsIgnorePattern": "^_",
+        }],
         "@typescript-eslint/no-shadow": [
             "error",
             {
@@ -132,7 +163,7 @@ module.exports = {
         ],
         "@typescript-eslint/type-annotation-spacing": "error",
         "@typescript-eslint/unified-signatures": "error",
-        "arrow-body-style": "error",
+        "arrow-body-style": "off",
         "arrow-parens": [
             "error",
             "always"
@@ -181,17 +212,17 @@ module.exports = {
         "no-bitwise": "error",
         "no-caller": "error",
         "no-cond-assign": "error",
-        "no-console": "error",
+        "no-console": "warn",
         "no-debugger": "error",
         "no-empty": "error",
-        "no-empty-function": "error",
+        "no-empty-function": "off",
         "no-eval": "error",
         "no-fallthrough": "off",
         "no-invalid-this": "off",
         "no-multiple-empty-lines": "error",
         "no-new-wrappers": "error",
         "no-null/no-null": "off",
-        "no-shadow": "error",
+        "no-shadow": "off",
         "no-throw-literal": "error",
         "no-trailing-spaces": "error",
         "no-undef-init": "error",
@@ -201,15 +232,12 @@ module.exports = {
         "no-unused-labels": "error",
         "no-use-before-define": "off",
         "no-var": "error",
-        "object-shorthand": "error",
-        "one-var": [
-            "error",
-            "never"
-        ],
+        "object-shorthand": "off",
+        "one-var":  "off",
         "prefer-arrow/prefer-arrow-functions": "off",
         "prefer-const": "off",
         "quote-props": "off",
-        "quotes": "error",
+        "quotes": ["error", "double", {"avoidEscape": true}],
         "radix": "error",
         "semi": "error",
         "space-before-function-paren": [
@@ -231,23 +259,5 @@ module.exports = {
         ],
         "use-isnan": "error",
         "valid-typeof": "off",
-        "@typescript-eslint/tslint/config": [
-            "error",
-            {
-                "rules": {
-                    "encoding": true,
-                    "import-spacing": true,
-                    "whitespace": [
-                        true,
-                        "check-branch",
-                        "check-decl",
-                        "check-operator",
-                        "check-separator",
-                        "check-type",
-                        "check-typecast"
-                    ]
-                }
-            }
-        ]
     }
 };
