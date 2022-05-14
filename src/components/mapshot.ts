@@ -1,9 +1,14 @@
-import { css, customElement, html, LitElement, property } from "lit-element";
+import { css, html, LitElement } from "lit";
+import { customElement, property } from "lit/decorators.js";
+import { CheckWebPFeature } from "../webp_detection";
+
+type MapshotExt = "webp" | "jpg" | "png";
 
 @customElement("xon-mapshot")
 export class MapshotComponent extends LitElement {
     public static mapshotApi: string = MAPSHOT_BASE_URL || "";
     public static missingMapshot: string = "/images/nopreview_map.png";
+    private static webpDetected: boolean | undefined = undefined;
     @property ({type: Boolean}) public loaded = false;
     private imgDOM: HTMLImageElement | undefined = undefined;
 
@@ -40,6 +45,17 @@ export class MapshotComponent extends LitElement {
         this.requestUpdate("map", oldValue);
     }
 
+    private static detectWebp(callback: (val: boolean) => void) {
+        if (MapshotComponent.webpDetected === undefined) {
+            CheckWebPFeature("alpha", (_feature: string, val: boolean) => {
+                MapshotComponent.webpDetected = val;
+                callback(val);
+            });
+        } else {
+            callback(MapshotComponent.webpDetected);
+        }
+    }
+
     public render() {
         if (!this.loaded) {
             return html`<div>loading...</div>`;
@@ -48,7 +64,7 @@ export class MapshotComponent extends LitElement {
         }
     }
 
-    private mapshotURL(ext: string = "png"): string {
+    private mapshotURL(ext: MapshotExt = "png"): string {
         return `${MapshotComponent.mapshotApi}${this.map}.${ext}`;
     }
 
@@ -68,15 +84,22 @@ export class MapshotComponent extends LitElement {
     }
 
     private loadImage() {
+        MapshotComponent.detectWebp((val) => {
+            if (val) {
+                this.loadWebpImage();
+            } else {
+                this.loadOldImage();
+            }
+        });
+    }
+
+    private loadOldImage() {
         if (!this.map) {
             return;
         }
         let pngImg = new Image();
         let jpgImg = new Image();
         let missingImg = new Image();
-        pngImg.src = this.mapshotURL("png");
-        jpgImg.src = this.mapshotURL("jpg");
-        missingImg.src = MapshotComponent.missingMapshot;
         let pngPromise: Promise<HTMLImageElement> = new Promise((resolve, reject) => {
             pngImg.onload = (() => resolve(pngImg));
             pngImg.onerror = pngImg.onabort = ((evt: string | Event) => reject(evt));
@@ -85,6 +108,9 @@ export class MapshotComponent extends LitElement {
             jpgImg.onload = (() => resolve(jpgImg));
             jpgImg.onerror = jpgImg.onabort = ((evt: string | Event) => reject(evt));
         });
+        pngImg.src = this.mapshotURL("png");
+        jpgImg.src = this.mapshotURL("jpg");
+        missingImg.src = MapshotComponent.missingMapshot;
         pngPromise.then((img) => {
             // cancel jpg loading
             jpgImg.src = "";
@@ -98,5 +124,20 @@ export class MapshotComponent extends LitElement {
             });
         });
     }
-}
 
+    private loadWebpImage() {
+        if (!this.map) {
+            return;
+        }
+        let webpImg = new Image();
+        let missingImg = new Image();
+        webpImg.onload = () => {
+            this.imageLoaded(webpImg, false);
+        };
+        webpImg.onerror = () => {
+            this.imageLoaded(missingImg, true);
+        };
+        webpImg.src = this.mapshotURL("webp");
+        missingImg.src = MapshotComponent.missingMapshot;
+    }
+}

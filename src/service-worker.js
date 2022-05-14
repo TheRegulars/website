@@ -5,35 +5,29 @@ import { StaleWhileRevalidate, CacheFirst } from "workbox-strategies";
 import { BroadcastUpdatePlugin } from "workbox-broadcast-update";
 import { ExpirationPlugin } from "workbox-expiration";
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
+import { CheckWebPFeature } from "./webp_detection";
 
 let wbManifest = self.__WB_MANIFEST || [];
 const mapshotURL = MAPSHOT_BASE_URL || "";
 const precacheMaps = [
-    "blockscape-inverted.jpg", "centermatchbig_v4_s.jpg",
-    "chaos.jpg", "cubearena_sc_v1.jpg",
-    "dissocia.jpg", "dna.jpg",
-    "dreamscape_r1.jpg", "dusty_symb.jpg",
-    "dusty_v2r1.jpg", "evil(space)ctf-inverted.jpg",
-    "furia_4.jpg", "gib_warehouse_v2r1.jpg",
-    "implosion.jpg", "inverted_dance.jpg",
-    "inverted_lostspace2.jpg", "iris.png",
-    "lostspace2.jpg", "powerstation_r2.jpg",
-    "recratemini.jpg", "rusty_r3.jpg",
-    "spectrum_2.jpg", "squareb4.jpg",
-    "symdusty_v2r3.jpg", "symdusty_xon_r2.jpg",
-    "tarx.jpg", "trance.jpg",
-    "warehouse_xon.jpg",
+    "evilspace_deepsky_v1r2", "chaos", "cubearena_sc_v1", "nexdance",
+    "dissocia", "dna", "dreamscape_r1", "dusty_symb", "dusty_v2r1",
+    "gib_warehouse_v2r1", "implosion", "lostspace2",
+    "powerstation_r2", "recratemini", "rusty_r3", "spectrum_2",
+    "symdusty_v2r3", "symdusty_xon_r2", "tarx", "trance",
+    "warehouse_xon", "hub3aeroq3a_nex_r4"
 ];
 
-
-wbManifest = wbManifest.concat(precacheMaps.map((mapimg) => {
-    return {
-        url: [mapshotURL, mapimg].join(""),
-        revision: null
-    }
-}));
-
 precacheAndRoute(wbManifest);
+
+CheckWebPFeature("alpha", (_feature, val) => {
+    const ext = (val) ? ".webp" : ".jpg";
+    const precacheImgs = precacheMaps.map((name) => [mapshotURL, name, ext].join(""));
+    precacheAndRoute(precacheImgs.map((url) => {
+        return {url: url, revision: null};
+    }));
+});
+
 const indexHandler = createHandlerBoundToURL("index.html");
 const navigationRoute = new NavigationRoute(indexHandler, {
     allowlist: [
@@ -56,7 +50,7 @@ registerRoute(
 );
 
 registerRoute(
-    /images\/[^\/]+\.(?:png|gif|jpg|jpeg|svg)$/,
+    /images\/[^\/]+\.(?:png|gif|jpg|jpeg|svg|webp)$/,
     new CacheFirst({
         cacheName: "images",
         plugins: [

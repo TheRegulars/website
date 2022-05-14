@@ -196,9 +196,9 @@ def generate_mapshots(pk3_filepath, upload_callback):
                 mapshots[mapshot_type][mapname.lower()] = filename
 
         for mapname in maps:
-            if mapname == '_hudsetup':
-                # ignore hudsetup
+            if mapname in ('_hudsetup', '_init'):
                 continue
+
             for mapshot_type in MapshotTypes:
                 try:
                     mapshot = mapshots[mapshot_type][mapname]

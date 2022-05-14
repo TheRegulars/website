@@ -24,7 +24,7 @@
             "value": "max-age=7776000"
         }]
     }, {
-        "source": "/images/*.@(png|jpg)",
+        "source": "/images/*.@(png|jpg|webp)",
         "headers": [{
             "key": "Cache-Control",
             "value": "max-age=604800"

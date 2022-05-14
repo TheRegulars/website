@@ -1,4 +1,5 @@
-import { customElement, html, LitElement, property, css } from "lit-element";
+import { css, html, LitElement } from "lit";
+import { customElement, property } from "lit/decorators.js";
 import { MapshotComponent } from "./mapshot";
 
 @customElement("xon-mapshot-tooltip")
