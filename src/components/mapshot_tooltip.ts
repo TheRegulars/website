@@ -1,6 +1,21 @@
 import { css, html, LitElement } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, eventOptions } from "lit/decorators.js";
 import { MapshotComponent } from "./mapshot";
+
+const supportsPassive = (() => {
+    let hasPassive = false;
+    try {
+        const opts = {
+            get passive() {
+                hasPassive = true;
+                return true;
+            }
+        };
+        (window.addEventListener as any)("testPassive", null, opts);
+        (window.removeEventListener as any)("testPassive", null, opts);
+    } catch {}
+    return hasPassive;
+})();
 
 @customElement("xon-mapshot-tooltip")
 export class MapshotTooltipComponent extends LitElement {
@@ -131,17 +146,18 @@ export class MapshotTooltipComponent extends LitElement {
         }
     };
 
-    private handleMouseEnter = (_evt: MouseEvent) => {
+    private handleMouseEnter(_evt: MouseEvent) {
         this._focused = true;
         this.delayedShowMapshot();
     };
 
-    private handleMouseLeave = (_evt: MouseEvent) => {
+    private handleMouseLeave(_evt: MouseEvent) {
         this.hideMapshot();
         this._focused = false;
     };
 
-    private handleTouchStart = (_evt: TouchEvent) => {
+    @eventOptions(supportsPassive ? {passive: true} : {})
+    private handleTouchStart(_evt: TouchEvent) {
         if (!this._focused) {
             return;
         }
