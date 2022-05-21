@@ -1,11 +1,14 @@
 
 export class TemplateRouter {
 
+    private static cleanupURLRe = /index\.html?/i;
     public contentContainer: HTMLElement | null = null;
     public initialized = false;
-    public routes: {[key: string]: HTMLTemplateElement} = {};
-    public activeLinks: HTMLAnchorElement[] = [];
-    public attachedLinks: HTMLAnchorElement[] = [];
+    private routes: {[key: string]: HTMLTemplateElement} = {};
+    private activeLinks: HTMLAnchorElement[] = [];
+    private attachedLinks: HTMLAnchorElement[] = [];
+    private indexRedirect: boolean = true;
+    private page404Template: HTMLTemplateElement | undefined = undefined;
 
     public loadRoutes() {
         document.querySelectorAll("template[page-url]").forEach((template) => {
@@ -13,13 +16,28 @@ export class TemplateRouter {
             if (!url) {
                 return;
             }
-            this.routes[url] = template as HTMLTemplateElement;
+            if (template.hasAttribute("page-404")) {
+                this.page404Template = template as HTMLTemplateElement;
+            } else {
+                this.routes[url] = template as HTMLTemplateElement;
+            }
         });
     }
 
     public changeRoute(path: string, pushHistory: boolean) {
-        const template = this.routes[path];
-        if (template === undefined || this.contentContainer === null) {
+        if (this.contentContainer === null) {
+            return;
+        }
+        if (TemplateRouter.cleanupURLRe.test(path)) {
+            path = path.replace(TemplateRouter.cleanupURLRe, "");
+            if (this.indexRedirect) {
+                this.changeRoute(path, true);
+                return;
+            }
+        }
+        const template = this.routes[path] || this.page404Template;
+        if (template === undefined) {
+            this.contentContainer.innerText = "Error 404, couldn't find template";
             return;
         }
         const title = template.getAttribute("title") || "";

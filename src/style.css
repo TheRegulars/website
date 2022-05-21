@@ -149,6 +149,85 @@ ul.demo-list {
     height: 320px;
 }
 
+.fa-ghost::before {
+    font-family: "Font Awesome 5 Free";
+    font-weight: 400;
+    content: "\f6e2";
+}
+
+.title-404 {
+    font-family: Xolonium, sans-serif;
+    font-size: clamp(1.15rem, 5.05vw, 2.65rem);
+    text-align: center;
+    background-image: linear-gradient(to bottom, #800000, #ecb711);
+    background-size: 100%;
+    background-clip: text;
+    color: transparent;
+    margin-top: 0;
+    margin-bottom: 5px;
+}
+
+.logo-404 {
+    font-size: clamp(3.1rem, 18.5vw, 11rem);
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+    text-align: center;
+    font-family: "Xolonium", sans-serif;
+    background-image: linear-gradient(to top, #800000, #ecb711);
+    background-size: 200% 200%;
+    background-clip: text;
+    color: transparent;
+    animation: error-colors 3.5s infinite linear;
+    filter: drop-shadow(2px 6px 0px rgba(0, 0, 0, 0.3));
+    user-select: none;
+    margin-top: 50px;
+}
+
+.logo-404 > span.fa-ghost {
+    display: inline-block;
+    background-image: linear-gradient(to top, #800000, #ecb711);
+    background-size: 200% 200%;
+    background-clip: text;
+    color: transparent;
+    animation: spooky 2s alternate infinite linear, error-colors 3.5s infinite linear;
+    filter: drop-shadow(2px 6px 0px rgba(0, 0, 0, 0.3));
+}
+
+.game-over {
+    width: min(90%, 620px);
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 10px;
+    user-select: none;
+    filter: drop-shadow(2px 6px 0px rgba(0, 0, 0, 0.3));
+}
+
+p.error-404-descr {
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+@keyframes spooky {
+    from {
+        transform: translatey(.10em) scaley(.98);
+    }
+
+    to {
+        transform: translatey(-.10em);
+    }
+}
+
+@keyframes error-colors {
+    0% { background-position: 0% 0%; }
+    50% { background-position: 0% 100%; }
+    100% { background-position: 0% 0%; }
+}
+
 @media screen and (max-width: 840px) {
     .grafana-iframe {
         width: 100%;

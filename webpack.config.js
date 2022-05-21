@@ -54,6 +54,12 @@ module.exports = {
             filename: 'index.html',
             scriptLoading: 'defer'
         }),
+        new HtmlWebpackPlugin({
+            minify: htmlMinifyOpts,
+            template: 'html/index.html',
+            filename: '404.html',
+            scriptLoading: 'defer'
+        }),
         new MiniCssExtractPlugin({
             filename: 'assets/style.[chunkhash].css'
         }),
