@@ -196,7 +196,7 @@ export class StatusComponent extends LitElement {
         }
         .col-slot, .col-ping {
             text-align: right;
-			padding-right: 10px;
+			      padding-right: 10px;
         }
         .col-ping {
             width: 8%;
@@ -241,7 +241,13 @@ export class StatusComponent extends LitElement {
         }
         @media screen and (max-width: 340px) {
             :host {
-                font-size: 0.76em;
+                font-size: 0.72em;
+            }
+            .col-slot {
+                visibility: collapse;
+                display: none;
+                width: 0;
+                height: 0;
             }
         }
         `;
