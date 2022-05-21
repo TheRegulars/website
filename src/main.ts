@@ -17,7 +17,7 @@ function loadFont(href: string) {
 
 function loadFonts() {
     loadFont("https://fonts.googleapis.com/css2?family=PT+Serif:wght@400;700&display=swap");
-    loadFont("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/solid.min.css");
+    loadFont("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css");
 }
 
 function documentReady() {
