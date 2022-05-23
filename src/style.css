@@ -1,5 +1,6 @@
 html, body {
     height: 100%;
+    scrollbar-gutter: stable;
 }
 
 body {
@@ -29,7 +30,7 @@ nav {
     margin-top: 10px;
     margin-bottom: 5px;
     text-align: center;
-    font-family: Xolonium, sans-serif;
+    font-family: Xolonium, Helvetica, sans-serif;
     user-select: none;
 }
 
@@ -165,7 +166,7 @@ ul.demo-list {
 }
 
 .title-404 {
-    font-family: Xolonium, sans-serif;
+    font-family: Xolonium, Helvetica, sans-serif;
     font-size: clamp(1.15rem, 5.05vw, 2.65rem);
     text-align: center;
     background-image: linear-gradient(to bottom, #800000, #ecb711);
@@ -184,7 +185,7 @@ ul.demo-list {
     margin-right: auto;
     display: block;
     text-align: center;
-    font-family: "Xolonium", sans-serif;
+    font-family: "Xolonium", Helvetica, sans-serif;
     background-image: linear-gradient(to top, #800000, #ecb711);
     background-size: 200% 200%;
     background-clip: text;
@@ -253,7 +254,6 @@ p.error-404-descr {
     }
 }
 
-
 @font-face {
     font-family: "Xolonium";
     src: url('/fonts/xolonium-regular.eot');
@@ -267,3 +267,93 @@ p.error-404-descr {
     font-display: swap;
 }
 
+.loading-spinner {
+    width: 30vmin;
+    fill: #5c5d5d;
+    margin: 0 auto;
+    display: block;
+}
+
+.spinner-small-shadow, .spinner-medium-shadow, .spinner-large-shadow {
+    fill: rgba(0, 0, 0, 0.6);
+}
+
+.spinner-small {
+    animation: loading-counter-rotation 2.5s infinite linear;
+    transform-origin: 100.136px 225.345px;
+}
+
+.spinner-small-shadow {
+    animation: loading-counter-rotation 2.5s infinite linear;
+    transform-origin: 110.136px 235.345px;
+}
+
+.spinner-medium {
+    animation: loading-rotation 3.75s infinite linear;
+    transform-origin: 254.675px 379.447px;
+}
+
+.spinner-medium-shadow {
+    animation: loading-rotation 3.75s infinite linear;
+    transform-origin: 264.675px 389.447px;
+}
+
+.spinner-large {
+    animation: loading-counter-rotation 5s infinite linear;
+    transform-origin: 461.37px 173.694px;
+}
+
+.spinner-large-shadow {
+    animation: loading-counter-rotation 5s infinite linear;
+    transform-origin: 471.37px 183.694px;
+}
+
+.spinner-text {
+    margin: 0 auto;
+    text-align: center;
+    font-family: Xolonium, Helvetica, sans-serif;
+    font-size: clamp(1.1rem, 3.1vmin, 2.4rem);
+    padding-top: 15px;
+}
+
+@keyframes loading-rotation {
+    from {transform: rotate(0deg);}
+    to {transform: rotate(359deg);}
+}
+
+@keyframes loading-counter-rotation {
+    from {transform: rotate(359deg);}
+    to {transform: rotate(0deg);}
+}
+
+header {
+    transition: all 260ms cubic-bezier(0.34, 1.56, 0.64, 1) 50ms;
+    transform: translateY(0);
+    opacity: 1;
+}
+
+footer {
+    transition: opacity 260ms ease-out 50ms;
+    opacity: 1;
+}
+
+header.loading {
+    transform: translateY(-100%);
+    opacity: 0.05;
+}
+
+footer.loading {
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .spinner-small, .spinner-small-shadow,
+    .spinner-medium, .spinner-medium-shadow,
+    .spinner-large, .spinner-large-shadow {
+        animation-name: none;
+    }
+    header, footer {
+        transition-duration: 0s !important;
+        transition-delay: 0s !important;
+    }
+}

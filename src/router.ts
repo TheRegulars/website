@@ -86,15 +86,20 @@ class DOMAnimation {
         if (!elem.parentNode) {
             return;
         }
-        if (this.mobileScreenSize) {
+        if (this.previousState === 0) {
+            anim = elem.animate(
+                [{opacity: 0.95}, {opacity: 0}],
+                {duration: 110, easing: "ease-in"}
+            );
+        } else if (this.mobileScreenSize) {
             const sign = (this.previousState > this.state) ? "" : "-";
             anim = elem.animate(
-                [{opacity: 1, transform: "translateX(0%)"}, {opacity: 0, transform: `translate(${sign}100%)`}],
-                {duration: 220, easing: "ease-in"}
+                [{opacity: 0, transform: "translateX(0%)"}, {opacity: 1, transform: `translate(${sign}100%)`}],
+                {duration: 180, easing: "ease-in"}
             );
         } else {
             anim = elem.animate(
-                [{opacity: 0.95, transform: "scale(1)"}, {opacity: 0, transform: "scale(1.05)"}],
+                [{opacity: 0.95, transform: "scale(1)"}, {opacity: 0, transform: "scale(1.04)"}],
                 {duration: 140, easing: "ease-in"}
             );
         }
@@ -139,16 +144,16 @@ class DOMAnimation {
             return;
         }
         parent.appendChild(elem);
-        if (this.mobileScreenSize) {
+        if (this.previousState === 0 || !this.mobileScreenSize) {
+            anim = elem.animate(
+                [{opacity: 0, transform: "scale(0.985)"}, {opacity: 1, transform: "scale(1)"}],
+                {duration: 210, easing: "cubic-bezier(0.34, 1.56, 0.64, 1)"}
+            );
+        } else {
             const sign = (this.previousState <= this.state) ? "" : "-";
             anim = elem.animate(
                 [{opacity: 0, transform: `translateX(${sign}100%)`}, {opacity: 1, transform: "translateX(0%)"}],
-                {duration: 380, easing: "ease-out"}
-            );
-        } else {
-            anim = elem.animate(
-                [ {opacity: 0, transform: "scale(0.98)"}, {opacity: 1, transform: "scale(1)"}],
-                {duration: 260, easing: "ease-out"}
+                {duration: 320, easing: "ease-out"}
             );
         }
         anim.play();

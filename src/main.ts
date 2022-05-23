@@ -24,6 +24,11 @@ function documentReady() {
     let router = new TemplateRouter();
     loadFonts();
     router.documentReady();
+    document.querySelectorAll(".loading").forEach((elem) => {
+        requestAnimationFrame(() => {
+            elem.classList.remove("loading");
+        });
+    });
 }
 
 function documentLoad() {
