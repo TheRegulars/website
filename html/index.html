@@ -25,7 +25,7 @@
             </nav>
         </header>
         <main content-container>
-            <template page-url="/" title="About TheRegulars">
+            <template page-url="/" title="About TheRegulars" animation-state="1">
                 <p>
                     Hi and welcome to our small <a href="http://xonotic.org/">Xonotic</a> comunity. If you are first time
                     here, The Regulars is small Xontic community that known mostly as <a href="https://github.com/xonotic/xonotic/wiki/InstaGib">Instagib</a> 
@@ -118,7 +118,7 @@
                 <h2>Server Rules</h2>
                 -->
             </template>
-            <template page-url="/servers/" title="TheRegulars Servers">
+            <template page-url="/servers/" title="TheRegulars Servers" animation-state="2">
                 <xon-status data-url="https://api.regulars.win/servers/pub.regulars.win" connect-host="pub.regulars.win" xon-stats-url="http://stats.xonotic.org/server/436">
                 </xon-status>
                 <xon-status data-url="https://api.regulars.win/servers/votable.regulars.win" connect-host="votable.regulars.win:26001" xon-stats-url="http://stats.xonotic.org/server/4171">
@@ -145,7 +145,7 @@
                 <iframe class="grafana-iframe" src="https://grafana.regulars.win/d-solo/tn0trwdik/xonotic-metrics?orgId=1&refresh=5m&from=now-3h&to=now&var-xon_server=All&panelId=2" class="grafana-iframe" frameborder="0"></iframe>
                 !-->
             </template>
-            <template page-url="/records/" title="CTF Capture Time Records – TheRegulars">
+            <template page-url="/records/" title="CTF Capture Time Records – TheRegulars" animation-state="3">
                 <p>
                     This is aggregated (across all servers) <abbr title="Time taken to take a flag from one base to another (make a capture)">capture</abbr>
                     time records. To make into this table you need to beat any record from here at any Regulars servers
@@ -167,7 +167,9 @@
                 <img src="images/game_over.svg" alt="Game Over" class="game-over">
               </div>
             </template>
-            Please wait, page is loading...
+            <div class="content-main">
+              Please wait, page is loading...
+            </div>
         </main>
         <footer>
             © 2022 The Regulars, site <a href="https://github.com/TheRegulars/website">sources available</a>
