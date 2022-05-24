@@ -2,8 +2,10 @@
   "name": "regulars-website",
   "version": "1.1.0",
   "description": "The Regulars Website",
+  "browserslist": "> 0.75% and not dead and not ie 11, Firefox ESR, not dead",
   "main": "./src/main.ts",
   "sideEffects": [
+    "./src/polyfills.js",
     "./src/components/xon_status.ts",
     "./src/components/records.ts",
     "./src/components/mapshot.ts",
@@ -66,7 +68,9 @@
   "author": "Slava",
   "license": "MIT",
   "dependencies": {
+    "core-js": "^3.22.7",
     "lit": "^2.2.3",
+    "regenerator-runtime": "^0.13.9",
     "workbox-broadcast-update": "^6.5.3",
     "workbox-cacheable-response": "^6.5.3",
     "workbox-expiration": "^6.5.3",

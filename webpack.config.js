@@ -21,11 +21,17 @@ var htmlMinifyOpts = {
     removeComments: true,
 };
 
+const excludePattern = /node_modules\/(?!(@?lit|workbox))/i;
+const babelLoader = {
+    loader: 'babel-loader',
+    options: {presets: [['@babel/preset-env', {useBuiltIns: "usage", corejs: 3}]]}
+};
+
 module.exports = {
-    entry: [
-        './src/main.ts',
-        './src/style.css'
-    ],
+    entry: {
+        main: ['./src/polyfills.js', './src/main.ts'],
+        style: './src/style.css'
+    },
     output: {
         filename: "assets/[name].bundle.[fullhash].js",
         path: path.join(__dirname, "dist")
@@ -95,13 +101,13 @@ module.exports = {
         rules: [
             {
                 test: /\.tsx?$/,
-                exclude: /node_modules/,
-                use: [{loader: 'ts-loader'}]
+                exclude: excludePattern,
+                use: [babelLoader, {loader: 'ts-loader'}]
             },
             {
                 test: /\.m?js$/,
-                exclude: /node_modules/,
-                use: [{loader: 'babel-loader', options: {presets: ['@babel/preset-env']}}]
+                exclude: excludePattern,
+                use: [babelLoader]
             },
             {
                 test: /\.css$/i,
