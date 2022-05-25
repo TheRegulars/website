@@ -94,7 +94,7 @@ class DOMAnimation {
         } else if (this.mobileScreenSize) {
             const sign = (this.previousState > this.state) ? "" : "-";
             anim = elem.animate(
-                [{opacity: 0, transform: "translateX(0%)"}, {opacity: 1, transform: `translate(${sign}100%)`}],
+                [{opacity: 1, transform: "translateX(0%)"}, {opacity: 0, transform: `translate(${sign}100%)`}],
                 {duration: 180, easing: "ease-in"}
             );
         } else {
