@@ -115,7 +115,12 @@ class S3MapshotStorage(BaseMapStorage):
         self.basepath = self.prefix
 
     def upload(self, filename, fileobj):
-        self.bucket.upload_fileobj(fileobj, self.filepath(filename))
+        content_type = self.filename_to_mimetype(filename)
+        extra_args = {}
+        if content_type is not None:
+            extra_args['ContentType'] = content_type
+
+        self.bucket.upload_fileobj(fileobj, self.filepath(filename), ExtraArgs=extra_args)
 
     def remove(self, filename):
         self.remove_many([filename])
@@ -140,6 +145,19 @@ class S3MapshotStorage(BaseMapStorage):
                 res.append(key)
 
         return res
+
+    @staticmethod
+    def filename_to_mimetype(filename):
+        # could be implemented with mimetypes module
+        filename = filename.lower()
+        if filename.endswith(".webp"):
+            return "image/webp"
+        elif filename.endswith(".jpeg") or filename.endswith(".jpg"):
+            return "image/jpeg"
+        elif filename.endswith(".png"):
+            return "image/png"
+        else:
+            return None
 
 
 def open_storage(url):
