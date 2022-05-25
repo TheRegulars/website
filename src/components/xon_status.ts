@@ -123,10 +123,7 @@ export class StatusComponent extends LitElement {
             flex-direction: row;
             justify-content: flex-start;
             flex-wrap: wrap;
-        }
-
-        div.server-info > * {
-            margin-bottom: 1em;
+            row-gap: 0.9em;
         }
 
         table.server-params {
@@ -158,6 +155,7 @@ export class StatusComponent extends LitElement {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            padding: 0.15rem 0;
         }
         xon-mapshot {
             max-height: 180px;
