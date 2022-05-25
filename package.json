@@ -75,6 +75,7 @@
     "workbox-cacheable-response": "^6.5.3",
     "workbox-expiration": "^6.5.3",
     "workbox-precaching": "^6.5.3",
+    "workbox-recipes": "^6.5.3",
     "workbox-routing": "^6.5.3",
     "workbox-strategies": "^6.5.3",
     "workbox-window": "^6.5.3"

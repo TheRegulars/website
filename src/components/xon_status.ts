@@ -324,7 +324,7 @@ export class StatusComponent extends LitElement {
     public disconnectedCallback() {
         super.disconnectedCallback();
         const connection = getConnection();
-        if (connection && connection.addEventListener) {
+        if (connection && (connection.addEventListener as any)) {
             connection.removeEventListener("change", this._connectionHandler);
         }
         if (this._visibilityHandler) {

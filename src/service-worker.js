@@ -1,4 +1,4 @@
-import * as navigationPreload from 'workbox-navigation-preload';
+import { googleFontsCache } from 'workbox-recipes';
 import { precacheAndRoute, createHandlerBoundToURL } from "workbox-precaching";
 import { registerRoute, NavigationRoute } from "workbox-routing";
 import { StaleWhileRevalidate, CacheFirst } from "workbox-strategies";
@@ -7,7 +7,7 @@ import { ExpirationPlugin } from "workbox-expiration";
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import { CheckWebPFeature } from "./webp_detection";
 
-let wbManifest = self.__WB_MANIFEST || [];
+const wbManifest = self.__WB_MANIFEST || [];
 const mapshotURL = MAPSHOT_BASE_URL || "";
 const precacheMaps = [
     "evilspace_deepsky_v1r2", "chaos", "cubearena_sc_v1", "nexdance",
@@ -18,27 +18,47 @@ const precacheMaps = [
     "warehouse_xon", "hub3aeroq3a_nex_r4"
 ];
 
-precacheAndRoute(wbManifest);
-
-CheckWebPFeature("alpha", (_feature, val) => {
-    const ext = (val) ? ".webp" : ".jpg";
-    const precacheImgs = precacheMaps.map((name) => [mapshotURL, name, ext].join(""));
-    precacheAndRoute(precacheImgs.map((url) => {
-        return {url: url, revision: null};
-    }));
-});
-
-const indexHandler = createHandlerBoundToURL("index.html");
-const navigationRoute = new NavigationRoute(indexHandler, {
-    allowlist: [
-        /^$/,
-        /^records\/$/i,
-        /^servers\/$/i,
+const mapshotsStrategy = new CacheFirst({
+    cacheName: "mapshot-cache",
+    matchOptions: {
+        ignoreVary: true
+    },
+    plugins: [
+        new ExpirationPlugin({
+            maxEntries: 700,
+            maxAgeSeconds: 30 * 24 * 60 * 60,
+            purgeOnQuotaError: true
+        }),
+        new CacheableResponsePlugin({
+            statuses: [0, 200, 404]
+        })
     ]
 });
 
-navigationPreload.enable();
+self.addEventListener("install", (evt) => {
+    evt.waitUntil((async () => {
+        const precachedMapshotsPromise = new Promise((resolve, reject) => {
+            CheckWebPFeature("alpha", (_feature, val) => {
+                try {
+                    const ext = (val) ? ".webp" : ".jpg";
+                    const precacheImgs = precacheMaps.map((name) => [mapshotURL, name, ext].join(""));
+                    resolve(precacheImgs);
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        });
+        const mapshotURLs = await precachedMapshotsPromise;
+        const done = mapshotURLs.map((url) => mapshotsStrategy.handleAll({event: evt, request: new Request(url)})[1]);
+        await Promise.all(done);
+    })());
+});
+
+precacheAndRoute(wbManifest);
+const indexHandler = createHandlerBoundToURL("index.html");
+const navigationRoute = new NavigationRoute(indexHandler);
 registerRoute(navigationRoute);
+googleFontsCache();
 
 registerRoute(
     /^https?:\/\/api.regulars.win\/(records|maps)$/i,
@@ -50,7 +70,7 @@ registerRoute(
 );
 
 registerRoute(
-    /images\/[^\/]+\.(?:png|gif|jpg|jpeg|svg|webp)$/,
+    /images\/[^\/]+\.(?:png|gif|jpe?g|svg|webp)$/i,
     new CacheFirst({
         cacheName: "images",
         plugins: [
@@ -58,29 +78,6 @@ registerRoute(
                 maxEntries: 30,
                 maxAgeSeconds: 30 * 24 * 60 * 60,
             }),
-        ]
-    })
-);
-
-registerRoute(
-    /^https:\/\/fonts\.googleapis\.com/,
-    new StaleWhileRevalidate({
-        cacheName: "google-fonts-stylesheets",
-    })
-);
-
-registerRoute(
-    /^https:\/\/fonts\.gstatic\.com/,
-    new CacheFirst({
-        cacheName: "google-fonts-webfonts",
-        plugins: [
-            new CacheableResponsePlugin({
-                statuses: [0, 200]
-            }),
-            new ExpirationPlugin({
-                maxAgeSeconds: 365 * 24 * 60 * 60,
-                maxEntries: 40
-            })
         ]
     })
 );
@@ -101,25 +98,7 @@ registerRoute(
     })
 );
 
-registerRoute(
-    /^https:\/\/dl.regulars.win\/mapshots\//i,
-    new CacheFirst({
-        cacheName: "mapshot-cache",
-        matchOptions: {
-            ignoreVary: true
-        },
-        plugins: [
-            new ExpirationPlugin({
-                maxEntries: 700,
-                maxAgeSeconds: 30 * 24 * 60 * 60,
-                purgeOnQuotaError: true
-            }),
-            new CacheableResponsePlugin({
-                statuses: [0, 200, 404]
-            })
-        ]
-    })
-);
+registerRoute(/^https:\/\/dl.regulars.win\/mapshots\//i, mapshotsStrategy);
 
 self.addEventListener("message", (evt) => {
     if (evt.data && evt.data.type === "SKIP_WAITING") {
