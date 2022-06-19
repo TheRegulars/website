@@ -56,7 +56,9 @@ self.addEventListener("install", (evt) => {
 
 precacheAndRoute(wbManifest);
 const indexHandler = createHandlerBoundToURL("index.html");
-const navigationRoute = new NavigationRoute(indexHandler);
+const navigationRoute = new NavigationRoute(indexHandler, {
+    denylist: [new RegExp('/(chat|discord|configs)/?')]
+});
 registerRoute(navigationRoute);
 googleFontsCache();
 
