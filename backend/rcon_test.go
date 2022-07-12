@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"strings"
 	"testing"
 )
@@ -16,39 +15,36 @@ players:  0 active (24 max)
 
 ^2IP                                             %pl ping  time   frags  no   name`
 
+var fullServer string = `"sv_public" is "-1" ["-1"]
+host:      [力] TheRegulars ☠ Instagib Server [git]
+version:  Xonotic build 12:58:11 Oct  6 2019 - (gamename Xonotic)
+protocol: 3504 (DP7)
+map:      dusty_v2r1
+timing:   0.3% CPU, 0.01% lost, offset avg 0.2ms, max 0.11ms, sdev 0.02ms
+players:  6 active (24 max)
+
+^2IP                                             %pl ping  time   frags  no   name
+^3botclient                                        0   70  0:04:22     42  #1   bot1
+^7127.0.0.1:39707                                  0   68  1:30:21   -666  #2   Player1
+^3127.0.0.2:60812                                  0   40  0:00:43      2  #3   Player2
+^7[3b04:4c9:127:7511:8:0:0:16]:38914               0   41  0:18:06     83  #10  Player3
+^3[2001:4:211:7466:271c:2345:abcd:ef01]:56338      0   58  3:13:22   -666  #12  Player4
+^7local                                            0   68  0:04:11   -666  #13  Player5
+`
+
 var memstatsRcon string = `286 memory pools, totalling 352844962 bytes (336.499MB)
 total allocated size: 1180312470 bytes (1125.634MB)
 `
 
-func TestParsePlayer(t *testing.T) {
-	var player Player
-
-	line := "^3botclient                                        0    0  0:00:07    0  #2   ^7[BOT]Toxic"
-	err := parseRconPlayer([]byte(line), &player)
-	if err != nil {
-		t.Error("Error during parsing ", err)
-	}
-
-	if player.IP != "botclient" || player.Number != 2 || player.Name != "[BOT]Toxic" {
-		t.Error("Player was parsed incorrectly ", player)
-	}
-	line = "^3127.0.0.1:5050   0   67  0:13:24 -666  #7   ^7^xBBFCovid-9 Antivirus  ^x7E0▲^7"
-	err = parseRconPlayer([]byte(line), &player)
-	if err != nil {
-		t.Error("Error during parsing ", err)
-	}
-	if player.IP != "127.0.0.1:5050" || player.Ping != 67 || player.Frags != -666 {
-		t.Error("Player was parse incorrectly ", player)
-	}
-}
-
-func TestParseRconStatus(t *testing.T) {
-	var status ServerStatus
-
-	scanner := bufio.NewScanner(strings.NewReader(emptyServer))
-	err := ParseRconStatus(scanner, &status)
+func TestParseStatusEmpty(t *testing.T) {
+	reader := strings.NewReader(emptyServer)
+	status, err := ParseStatus(reader)
 	if err != nil {
 		t.Error("Error during parsing server response ", err)
+	}
+
+	if status.Public != 1 {
+		t.Error("Incorrect status result ", status)
 	}
 
 	if status.Map != "dusty_v2r1" {
@@ -78,13 +74,49 @@ func TestParseRconStatus(t *testing.T) {
 	if status.Protocol != "3504 (DP7)" {
 		t.Error("Incorrect protocol", status)
 	}
+	if len(status.Players) != 0 {
+		t.Error("Incorrect players count", status)
+	}
 }
 
-func TestParseRconMemstats(t *testing.T) {
-	var memstats ServerMemstats
+func TestParseStatusFull(t *testing.T) {
+	var p Player
+	reader := strings.NewReader(fullServer)
+	status, err := ParseStatus(reader)
+	if err != nil {
+		t.Error("Error during parsing server response ", err)
+	}
+	if status.Public != -1 {
+		t.Error("Incorrect status result ", status)
+	}
+	if status.PlayersActive != 6 || len(status.Players) != 6 {
+		t.Error("Incorrect number of players ", status)
+	}
+	p = status.Players[0]
+	if !p.IsBot || p.Name != "bot1" || p.Ping != 70 {
+		t.Error("Incorrectly parsed first player ", p)
+	}
+	p = status.Players[1]
+	if p.IP != "127.0.0.1:39707" || p.Name != "Player1" || p.Frags != -666 || p.Number != 2 {
+		t.Error("Incorrectly parsed second player ", p)
+	}
+	p = status.Players[3]
+	if p.IP != "[3b04:4c9:127:7511:8:0:0:16]:38914" || p.Name != "Player3" || p.Number != 10 {
+		t.Error("Incorrectly parsed 4 player ", p)
+	}
+	p = status.Players[4]
+	if p.IP != "[2001:4:211:7466:271c:2345:abcd:ef01]:56338" || p.Name != "Player4" || p.Time != "3:13:22" {
+		t.Error("Incorrectly parsed 5 player ", p)
+	}
+	p = status.Players[5]
+	if p.IP != "local" || p.PL != 0 || p.Frags != -666 || p.Name != "Player5" || p.Number != 13 {
+		t.Error("Incorrectly parsed 6 player ", p)
+	}
+}
 
-	scanner := bufio.NewScanner(strings.NewReader(memstatsRcon))
-	err := ParseMemstats(scanner, &memstats)
+func TestParseMemstats(t *testing.T) {
+	reader := strings.NewReader(memstatsRcon)
+	memstats, err := ParseMemstats(reader)
 
 	if err != nil {
 		t.Error("Error during parsing ", err)
@@ -100,5 +132,38 @@ func TestParseRconMemstats(t *testing.T) {
 
 	if memstats.TotalAllocatedSize != 1180312470 {
 		t.Error("Total allocated size was parsed incorrectly ", memstats.TotalAllocatedSize)
+	}
+}
+
+func FuzzParseMemstats(f *testing.F) {
+	f.Add(memstatsRcon)
+
+	f.Fuzz(func(t *testing.T, in string) {
+		reader := strings.NewReader(in)
+		ParseMemstats(reader)
+	})
+}
+
+func FuzzParseStatus(f *testing.F) {
+	f.Add(emptyServer)
+	f.Add(fullServer)
+
+	f.Fuzz(func(t *testing.T, in string) {
+		reader := strings.NewReader(in)
+		ParseStatus(reader)
+	})
+}
+
+func BenchmarkParseMemstats(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		reader := strings.NewReader(memstatsRcon)
+		ParseMemstats(reader)
+	}
+}
+
+func BenchmarkParseStatus(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		ParseStatus(strings.NewReader(emptyServer))
+		ParseStatus(strings.NewReader(fullServer))
 	}
 }
