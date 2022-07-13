@@ -7,6 +7,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"net/url"
 )
 
 const BUFSIZE = 4096
@@ -450,4 +451,137 @@ parsePlayers:
 	playerNew:
 	}
 	return &status, nil
+}
+
+func ParseServerInfo(r io.Reader) (*ServerInfo, error) {
+	var info ServerInfo
+	var ss, se int
+
+	p := newReadProcessor(r)
+	genError := func(e error) error {
+		return fmt.Errorf("Failed parsing gametype with %w", e)
+	}
+	p.tok = p.cur
+	/*!re2c
+	@ss [^:\n]+ @se ":" {
+		info.Gametype = strings.ToLower(string(p.buf[ss:se]))
+		goto gameVersion
+	}
+	* { return nil, genError(invalidInputError) }
+	$ { return nil, genError(io.EOF) }
+	*/
+gameVersion:
+	genError = func(e error) error {
+		return fmt.Errorf("Failed parsing game version with %w", e)
+	}
+	p.tok = p.cur
+	/*!re2c
+	@ss [^:\n]+ @se ":" {
+		info.Version = strings.ToLower(string(p.buf[ss:se]))
+		goto pureChanges
+	}
+	* { return &info, genError(invalidInputError) }
+	$ { return &info, genError(io.EOF) }
+	*/
+pureChanges:
+	genError = func(e error) error {
+		return fmt.Errorf("Failed parsing pure changes with %w", e)
+	}
+	p.tok = p.cur
+	/*!re2c
+	"P" @ss num @se ":" {
+		val, err := strconv.ParseInt(string(p.buf[ss:se]), 10, 64)
+		if err != nil {
+			return &info, genError(err)
+		}
+		info.PureChangesCount = val
+		goto joinAllowed
+	}
+	* { return &info, genError(invalidInputError) }
+	$ { return &info, genError(io.EOF) }
+	*/
+joinAllowed:
+	genError = func(e error) error {
+		return fmt.Errorf("Failed parsing join allowed count with %w", e)
+	}
+	p.tok = p.cur
+	/*!re2c
+	"S" @ss num @se ":" {
+		val, err := strconv.ParseInt(string(p.buf[ss:se]), 10, 64)
+		if err != nil {
+			return &info, genError(err)
+		}
+		info.JoinAllowedCount = val
+		goto serverFlags
+	}
+	* { return &info, genError(invalidInputError) }
+	$ { return &info, genError(io.EOF) }
+	*/
+serverFlags:
+	genError = func(e error) error {
+		return fmt.Errorf("Failed parsing server flags with %w", e)
+	}
+	p.tok = p.cur
+	/*!re2c
+	"F" @ss num @se ":" {
+		val, err := strconv.ParseInt(string(p.buf[ss:se]), 10, 32)
+		if err != nil {
+			return &info, genError(err)
+		}
+		info.ServerFlags = int32(val)
+		goto termsOfService
+	}
+	* { return &info, genError(invalidInputError) }
+	$ { return &info, genError(io.EOF) }
+	*/
+termsOfService:
+	genError = func(e error) error {
+		return fmt.Errorf("Failed parsing terms of service %w", e)
+	}
+	p.tok = p.cur
+	/*!re2c
+	"T" @ss [^:\n]+ @se ":" {
+		encodedUrl := strings.ToLower(string(p.buf[ss:se]))
+		if encodedUrl != "invalid" {
+			unescaped, err := url.PathUnescape(encodedUrl)
+			if err != nil {
+				return &info, genError(err)
+			}
+			info.TermsOfServiceURL = unescaped
+		} else {
+			info.TermsOfServiceURL = ""
+		}
+		goto modName
+	}
+	* { return &info, genError(invalidInputError) }
+	$ { return &info, genError(io.EOF) }
+	*/
+modName:
+	genError = func(e error) error {
+		return fmt.Errorf("Failed parsing mod name %w", e)
+	}
+	p.tok = p.cur
+	/*!re2c
+	"M" @ss [^:\n]+ @se "::" {
+		info.ModName = string(p.buf[ss:se])
+		goto scoreString
+	}
+	* { return &info, genError(invalidInputError) }
+	$ { return &info, genError(io.EOF) }
+	*/
+scoreString:
+	genError = func(e error) error {
+		return fmt.Errorf("Failed parsing score string %w", e)
+	}
+	p.tok = p.cur
+	/*!re2c
+	@ss .* @se {
+		info.ScoreString = string(p.buf[ss:se])
+		goto done
+	}
+	* { return &info, genError(invalidInputError) }
+	$ { return &info, genError(io.EOF) }
+	*/
+done:
+	return &info, nil
 }

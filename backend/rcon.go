@@ -54,6 +54,17 @@ type ServerStatus struct {
 	Players       []Player `json:"players,omitempty"`
 }
 
+type ServerInfo struct {
+	Gametype          string `json:"gametype"`
+	Version           string `json:"version"`
+	PureChangesCount  int64  `json:"pure_changes_count"`
+	JoinAllowedCount  int64  `json:"join_allowed_count"`
+	ServerFlags       int32  `json:"server_flags"`
+	TermsOfServiceURL string `json:"terms_of_service"`
+	ModName           string `json:"mod_name"`
+	ScoreString       string `json:"score_string"`
+}
+
 type PlayerStats struct {
 	Bots       int
 	Spectators int
@@ -162,6 +173,15 @@ func QueryRconStatus(server *ServerConfig, deadline time.Time) (*ServerStatus, e
 	}
 	defer reader.Close()
 	return ParseStatus(reader)
+}
+
+func QueryRconInfo(server *ServerConfig, deadline time.Time) (*ServerInfo, error) {
+	reader, err := rconExecute(server, deadline, "prvm_globalget server worldstatus")
+	if err != nil {
+		return nil, err
+	}
+	defer reader.Close()
+	return ParseServerInfo(reader)
 }
 
 func PingServer(server *ServerConfig, deadline time.Time) (time.Duration, error) {

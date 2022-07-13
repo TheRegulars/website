@@ -36,6 +36,8 @@ var memstatsRcon string = `286 memory pools, totalling 352844962 bytes (336.499M
 total allocated size: 1180312470 bytes (1125.634MB)
 `
 
+var worldstatus string = `nb:git:P19:S11:F3:TINVALID:MXPM::goals!!:goals!!:5:0:14:0`
+
 func TestParseStatusEmpty(t *testing.T) {
 	reader := strings.NewReader(emptyServer)
 	status, err := ParseStatus(reader)
@@ -132,6 +134,23 @@ func TestParseMemstats(t *testing.T) {
 
 	if memstats.TotalAllocatedSize != 1180312470 {
 		t.Error("Total allocated size was parsed incorrectly ", memstats.TotalAllocatedSize)
+	}
+}
+
+func TestParseInfo(t *testing.T) {
+	reader := strings.NewReader(worldstatus)
+	info, err := ParseServerInfo(reader)
+	if err != nil {
+		t.Error("Error during parsing ", err)
+	}
+	if info.Gametype != "nb" || info.Version != "git" || info.PureChangesCount != 19 {
+		t.Error("Incorrectly parsed ServerInfo ", info)
+	}
+	if info.JoinAllowedCount != 11 || info.ServerFlags != 3 || info.TermsOfServiceURL != "" {
+		t.Error("Incorrectly parsed ServerInfo ", info)
+	}
+	if info.ModName != "XPM" || info.ScoreString != "goals!!:goals!!:5:0:14:0" {
+		t.Error("Incorrectly parsed ServerInfo ", info)
 	}
 }
 
