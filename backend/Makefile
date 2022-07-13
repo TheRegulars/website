@@ -1,27 +1,34 @@
 .PHONY: clean test fuzz-memstats fuzz-status bench default
 
-GO_FILES = $(wildcard *.go)
-FILES = ${GO_FILES} go.mod go.sum rcon_parser.re rcon_parser.go
+RE2GO ?= re2go
+GO_FILES = $(wildcard cmd/*.go pkg/**/*.go)
+RE_FILES = $(wildcard pkg/**/*.re)
+GENERATED_RE_FILES = $(RE_FILES:%.re=%.go)
+FILES = ${GO_FILES} ${RE_FILES} ${GENERATED_RE_FILES} go.mod go.sum
 
 default: backend
 
-rcon_parser.go: rcon_parser.re
-	re2go rcon_parser.re --tags -W -o rcon_parser.go -i
+my:
+	echo ${GENERATED_RE_FILES}
+
+${GENERATED_RE_FILES}: ${RE_FILES}
+	$(RE2GO) $< --tags -W -o $@ -i
 
 backend: ${FILES}
-	go build -o backend ./
+	go build -o backend ./cmd/
 
 test: ${FILES}
-	go test ./
+	go test ./pkg/rcon/
 
 fuzz-memstats: ${FILES}
-	go test -fuzz=FuzzParseMemstats ./
+	go test -fuzz=FuzzParseMemstats ./pkg/rcon/
 
 fuzz-status: ${FILES}
-	go test -fuzz=FuzzParseStatus ./
+	go test -fuzz=FuzzParseStatus ./pkg/rcon/
 
 bench: ${FILES}
-	go test -bench=. ./
+	go test -bench=. ./pkg/rcon/
 
 clean:
+	@rm -f ${GENERATED_RE_FILES}
 	@rm -f backend

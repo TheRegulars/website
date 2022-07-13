@@ -1,11 +1,12 @@
-package main
+package rcon
 
 import (
 	"bytes"
 	"crypto/hmac"
-	"golang.org/x/crypto/md4"
 	"strconv"
 	"time"
+
+	"golang.org/x/crypto/md4"
 )
 
 const (

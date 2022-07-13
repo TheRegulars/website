@@ -1,6 +1,6 @@
-module github.com/bacher09/regulars-website/backend
+module github.com/TheRegulars/website/backend
 
-go 1.14
+go 1.16
 
 require (
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect

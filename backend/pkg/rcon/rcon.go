@@ -1,5 +1,5 @@
 //go:generate re2go rcon_parser.re --tags -W -o rcon_parser.go -i
-package main
+package rcon
 
 import (
 	"bytes"

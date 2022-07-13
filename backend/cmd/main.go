@@ -2,12 +2,11 @@ package main
 
 import (
 	"crypto/md5"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/xeipuuv/gojsonschema"
-	"gopkg.in/yaml.v2"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -21,17 +20,25 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/TheRegulars/website/backend/pkg/rcon"
+	"github.com/xeipuuv/gojsonschema"
+	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
-	Servers map[string]ServerConfig `json:"servers,omitempty" yaml:"servers,omitempty"`
-	GameDB  []string                `json:"gamedb,omitempty" yaml:"gamedb,omitempty"`
-	GameDIR []string                `json:"gamedir,omitempty" yaml:"gamedir,omitempty"`
+	Servers map[string]rcon.ServerConfig `json:"servers,omitempty" yaml:"servers,omitempty"`
+	GameDB  []string                     `json:"gamedb,omitempty" yaml:"gamedb,omitempty"`
+	GameDIR []string                     `json:"gamedir,omitempty" yaml:"gamedir,omitempty"`
 }
+
+//go:embed config_schema.json
+var configSchema string
 
 var serverPort = flag.Int("port", 8080, "HTTP Server port")
 var serverHost = flag.String("addr", "", "Listen ip, empty by default")
 var config atomic.Value
+
 var mapsState *MapsState
 var viewTemplates = template.Must(template.Must(template.New("exporters").Parse(`
 <html>
@@ -117,7 +124,7 @@ func records(w http.ResponseWriter, r *http.Request) {
 
 func servers(w http.ResponseWriter, r *http.Request) {
 	conf := getConfig()
-	statuses := QueryRconServers(conf.Servers, time.Millisecond*800, 3)
+	statuses := rcon.QueryRconServers(conf.Servers, time.Millisecond*800, 3)
 	json, err := json.Marshal(statuses)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -135,7 +142,7 @@ func server(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Server not found", http.StatusNotFound)
 		return
 	}
-	status, err := QueryRconServer(serverConf, time.Millisecond*1000, 3)
+	status, err := rcon.QueryRconServer(serverConf, time.Millisecond*1000, 3)
 	if err != nil {
 		http.Error(w, "Can't load data from server", http.StatusInternalServerError)
 		return
@@ -172,7 +179,7 @@ func metrics(w http.ResponseWriter, r *http.Request) {
 	templateContext := struct {
 		Name     string
 		Hostname string
-		Metrics  *ServerMetrics
+		Metrics  *rcon.ServerMetrics
 	}{
 		Name:     server,
 		Hostname: "",
@@ -184,7 +191,7 @@ func metrics(w http.ResponseWriter, r *http.Request) {
 		err = errors.New("Server not found")
 		return
 	}
-	metrics, err := QueryServerMetrics(serverConf, time.Millisecond*800, 3)
+	metrics, err := rcon.QueryServerMetrics(serverConf, time.Millisecond*800, 3)
 	if err != nil {
 		err = errors.New("Failed to load metrics")
 		goto ErrorHandler

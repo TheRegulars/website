@@ -1,4 +1,4 @@
-package main
+package rcon
 
 import (
 	"errors"
@@ -575,7 +575,7 @@ scoreString:
 	}
 	p.tok = p.cur
 	/*!re2c
-	@ss .* @se {
+	@ss .+ @se {
 		info.ScoreString = string(p.buf[ss:se])
 		goto done
 	}
