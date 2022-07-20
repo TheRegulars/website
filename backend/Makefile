@@ -8,9 +8,6 @@ FILES = ${GO_FILES} ${RE_FILES} ${GENERATED_RE_FILES} go.mod go.sum
 
 default: backend
 
-my:
-	echo ${GENERATED_RE_FILES}
-
 ${GENERATED_RE_FILES}: ${RE_FILES}
 	$(RE2GO) $< --tags -W -o $@ -i
 

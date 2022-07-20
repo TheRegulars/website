@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/md5"
 	_ "embed"
 	"encoding/json"
@@ -22,6 +23,7 @@ import (
 	"time"
 
 	"github.com/TheRegulars/website/backend/pkg/rcon"
+	"github.com/go-chi/chi/v5"
 	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v2"
 )
@@ -32,11 +34,18 @@ type Config struct {
 	GameDIR []string                     `json:"gamedir,omitempty" yaml:"gamedir,omitempty"`
 }
 
+type ServerAll struct {
+	*rcon.ServerStatus
+	Info *rcon.ServerInfo `json:"info"`
+}
+
 //go:embed config_schema.json
 var configSchema string
 
 var serverPort = flag.Int("port", 8080, "HTTP Server port")
 var serverHost = flag.String("addr", "", "Listen ip, empty by default")
+var shutdownTimeout = flag.Duration("shutdownTimeout", time.Second*10, "Timeout for gracefull shutdown")
+
 var config atomic.Value
 
 var mapsState *MapsState
@@ -123,9 +132,15 @@ func records(w http.ResponseWriter, r *http.Request) {
 }
 
 func servers(w http.ResponseWriter, r *http.Request) {
+	var servers []string
+
 	conf := getConfig()
-	statuses := rcon.QueryRconServers(conf.Servers, time.Millisecond*800, 3)
-	json, err := json.Marshal(statuses)
+	for k := range conf.Servers {
+		servers = append(servers, k)
+	}
+	json, err := json.Marshal(struct {
+		Servers []string `json:"servers"`
+	}{servers})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -136,7 +151,7 @@ func servers(w http.ResponseWriter, r *http.Request) {
 
 func server(w http.ResponseWriter, r *http.Request) {
 	conf := getConfig()
-	serverName := strings.TrimPrefix(r.URL.Path, "/servers/")
+	serverName := chi.URLParam(r, "server")
 	serverConf, ok := conf.Servers[serverName]
 	if !ok {
 		http.Error(w, "Server not found", http.StatusNotFound)
@@ -148,6 +163,81 @@ func server(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	json, err := json.Marshal(status)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(json)
+}
+
+// TODO: DRY
+func info(w http.ResponseWriter, r *http.Request) {
+	var err error
+	var info *rcon.ServerInfo
+
+	conf := getConfig()
+	serverName := chi.URLParam(r, "server")
+	serverConf, ok := conf.Servers[serverName]
+	if !ok {
+		http.Error(w, "Server not found", http.StatusNotFound)
+		return
+	}
+	// TODO: refactor retries
+	// TODO: configurable retries
+	for i := 0; i < 3; i++ {
+		deadline := time.Now().Add(time.Millisecond * 1000)
+		info, err = rcon.QueryRconInfo(&serverConf, deadline)
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		http.Error(w, "Can't load data from server", http.StatusInternalServerError)
+		return
+	}
+	json, err := json.Marshal(info)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(json)
+}
+
+// TODO: parallel query
+func serverAll(w http.ResponseWriter, r *http.Request) {
+	var infoErr error
+	var info *rcon.ServerInfo
+
+	conf := getConfig()
+	serverName := chi.URLParam(r, "server")
+	serverConf, ok := conf.Servers[serverName]
+	if !ok {
+		http.Error(w, "Server not found", http.StatusNotFound)
+		return
+	}
+
+	for i := 0; i < 3; i++ {
+		deadline := time.Now().Add(time.Millisecond * 1000)
+		info, infoErr = rcon.QueryRconInfo(&serverConf, deadline)
+		if infoErr == nil {
+			break
+		}
+	}
+	if infoErr != nil {
+		http.Error(w, "Can't load data from server", http.StatusInternalServerError)
+		return
+	}
+	status, err := rcon.QueryRconServer(serverConf, time.Millisecond*1000, 3)
+	if err != nil {
+		http.Error(w, "Can't load data from server", http.StatusInternalServerError)
+		return
+	}
+	json, err := json.Marshal(ServerAll{
+		ServerStatus: status,
+		Info:         info,
+	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -276,6 +366,20 @@ func getConfig() *Config {
 	return conf
 }
 
+func webService() http.Handler {
+	r := chi.NewRouter()
+	r.Get("/healthz", healthz)
+	r.Get("/records", records)
+	r.Get("/servers", servers)
+	r.Get("/servers/{server}", serverAll)
+	r.Get("/servers/{server}/status", server)
+	r.Get("/servers/{server}/info", info)
+	r.Get("/exporters", exporters)
+	r.Get("/metrics", metrics)
+	r.Get("/maps", maps)
+	return r
+}
+
 func main() {
 	var filename string
 
@@ -286,7 +390,6 @@ func main() {
 		os.Exit(1)
 	}
 	filename = flag.Arg(0)
-	// TODO: reload config on SIGHUP
 	conf, ok := loadConfig(filename)
 	if !ok {
 		fmt.Println("Configuration is invalid")
@@ -299,9 +402,15 @@ func main() {
 		return getConfig().GameDIR
 	}
 
+	listenAddr := net.JoinHostPort(*serverHost, strconv.Itoa(*serverPort))
+	server := http.Server{Addr: listenAddr, Handler: webService()}
+	serverCtx, serverStopCtx := context.WithCancel(context.Background())
+
 	go func() {
 		sigHUP := make(chan os.Signal, 1)
 		signal.Notify(sigHUP, syscall.SIGHUP)
+		sigQuit := make(chan os.Signal, 1)
+		signal.Notify(sigQuit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 		for {
 			select {
@@ -313,17 +422,28 @@ func main() {
 					config.Store(conf)
 					log.Println("Successfully updated config")
 				}
+			case <-sigQuit:
+				log.Println("Received gracefull shutdown event")
+				shutdownCtx, cancel := context.WithTimeout(serverCtx, *shutdownTimeout)
+				go func() {
+					<-shutdownCtx.Done()
+					if shutdownCtx.Err() == context.DeadlineExceeded {
+						log.Fatal("graceful shutdown timed out")
+					}
+				}()
+				if err := server.Shutdown(shutdownCtx); err != nil {
+					log.Fatal(err)
+				}
+				serverStopCtx()
+				cancel()
+				return
 			}
 		}
 	}()
 
-	listenAddr := net.JoinHostPort(*serverHost, strconv.Itoa(*serverPort))
-	http.HandleFunc("/healthz", healthz)
-	http.HandleFunc("/records", records)
-	http.HandleFunc("/servers", servers)
-	http.HandleFunc("/servers/", server)
-	http.HandleFunc("/exporters", exporters)
-	http.HandleFunc("/metrics", metrics)
-	http.HandleFunc("/maps", maps)
-	log.Fatal(http.ListenAndServe(listenAddr, nil))
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatal(err)
+	}
+	// wait till all requests is done
+	<-serverCtx.Done()
 }

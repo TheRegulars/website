@@ -3,6 +3,7 @@ module github.com/TheRegulars/website/backend
 go 1.16
 
 require (
+	github.com/go-chi/chi/v5 v5.0.7 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d

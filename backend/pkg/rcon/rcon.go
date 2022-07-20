@@ -233,33 +233,6 @@ func QueryRconServer(conf ServerConfig, timeout time.Duration, retries int) (*Se
 	return status, err
 }
 
-func QueryRconServers(servers map[string]ServerConfig, timeout time.Duration, retries int) map[string]*ServerStatus {
-	var mux sync.Mutex
-	var wg sync.WaitGroup
-
-	statuses := make(map[string]*ServerStatus, len(servers))
-	for k, v := range servers {
-		wg.Add(1)
-		go func(key string, conf ServerConfig) {
-			defer wg.Done()
-			for i := 0; i < retries; i++ {
-				deadline := time.Now().Add(timeout)
-				status, err := QueryRconStatus(&conf, deadline)
-				if err == nil {
-					mux.Lock()
-					statuses[key] = status
-					mux.Unlock()
-					return
-				}
-				log.Printf("rcon error: %v", err)
-			}
-		}(k, v)
-	}
-	wg.Wait()
-
-	return statuses
-}
-
 func QueryServerMetrics(server ServerConfig, timeout time.Duration, retries int) (*ServerMetrics, error) {
 	var metrics ServerMetrics
 	var wg sync.WaitGroup
