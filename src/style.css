@@ -1,3 +1,8 @@
+:root {
+    --link-nonactive-color: #00bc8c;
+    --link-hover-color: #007053;
+}
+
 html, body {
     height: 100%;
     scrollbar-gutter: stable;
@@ -91,7 +96,9 @@ main {
 
 footer {
     flex-shrink: 0;
-    margin-top: 5px;
+    margin-top: 15px;
+    margin-left: 45px;
+    margin-right: 45px;
     padding-bottom: 15px;
     text-align: center;
     font-size: .82rem;
@@ -99,7 +106,7 @@ footer {
 
 a {
     text-decoration: none;
-    color: #00bc8c;
+    color: var(--link-nonactive-color);
     background-color: transparent;
 }
 
@@ -112,7 +119,7 @@ a[download]::before {
 }
 
 a:hover {
-    color: #007053;
+    color: var(--link-hover-color);
     text-decoration: underline;
 }
 
@@ -131,6 +138,10 @@ abbr {
     border-radius: 0.25rem;
     padding: 0.075rem;
     background-color: rgba(204, 204, 204, 0.1);
+}
+
+.game-cmd {
+    font-family: monospace;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -346,6 +357,81 @@ header.loading {
 footer.loading {
     opacity: 0;
 }
+
+details {
+    margin-top: 0.3em;
+    overflow: hidden;
+}
+
+details summary::-webkit-details-marker { display:none; }
+
+details > summary {
+    color: #fff;
+    cursor: pointer;
+    user-select: none;
+    display: block;
+    position: relative;
+    padding: 0.3em;
+    padding-left: 1.2em;
+    font-size: 1.1rem;
+}
+
+details > summary:hover {
+    color: #ddd;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+}
+
+details > summary::before {
+    content: '';
+    border-width: 0.4em;
+    border-style: solid;
+    border-color: transparent transparent transparent #fff;
+    position: absolute;
+    top: 0.5em;
+    left: 0.2em;
+    transform-origin: 0.2em 50%;
+    transform: rotate(0deg);
+    transition: .25s transform ease;
+}
+
+details[open] > summary:before {
+    transform: rotate(90deg);
+}
+
+.rules ol {
+    padding-inline-start: clamp(0.8em, 3.2vw, 2.4em);
+    list-style: none;
+    counter-reset: rule;
+}
+
+.rules li > ol {
+    margin: 1em 0;
+}
+
+.rules li::before {
+    counter-increment: rule;
+    content: counters(rule, ".") " ";
+    margin-right: 0.5em;
+}
+
+.rules li {
+    margin-bottom: 0.1em;
+}
+
+@media screen and (max-width: 550px) {
+    .rules > ol {
+        padding-inline-start: 0;
+    }
+    .rules li {
+        margin-bottom: 1em;
+    }
+
+    .rules li > ol {
+        margin: 1.2em 0;
+    }
+}
+
 
 @media (prefers-reduced-motion: reduce) {
     .spinner-small, .spinner-small-shadow,
