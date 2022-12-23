@@ -23,6 +23,9 @@ fuzz-memstats: ${FILES}
 fuzz-status: ${FILES}
 	go test -fuzz=FuzzParseStatus ./pkg/rcon/
 
+fuzz-scores: ${FILES}
+	go test -fuzz=FuzzParseScores ./pkg/rcon/
+
 bench: ${FILES}
 	go test -bench=. ./pkg/rcon/
 

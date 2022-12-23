@@ -83,7 +83,7 @@ func ParseMemstats(r io.Reader) (*ServerMemstats, error) {
 		return fmt.Errorf("Failed parsing allocated memory with: %w", e)
 	}
 	p.tok = p.cur
-	/*!re2c:memstats
+	/*!re2c
 	re2c:define:YYCTYPE		 = byte;
 	re2c:define:YYPEEK		 = "p.buf[p.cur]";
 	re2c:define:YYSKIP		 = "p.cur += 1";
@@ -173,7 +173,7 @@ func ParseStatus(r io.Reader) (*ServerStatus, error) {
 	}
 
 	p.tok = p.cur
-	/*!re2c:status
+	/*!re2c
 	space = [ \t];
 	float = "-"? digit+("." digit*)?;
 
@@ -584,4 +584,74 @@ scoreString:
 	*/
 done:
 	return &info, nil
+}
+
+func ParseScores(r io.Reader) (*ServerScores, error) {
+	var scores ServerScores
+	var as, ae, bs, be, cs, ce int
+
+	p := newReadProcessor(r)
+    genError := func(e error) error {
+        return fmt.Errorf("Error parsing scores: %w", e)
+    }
+    scores.TeamScores = make(map[int][]int64)
+    for {
+        p.tok = p.cur
+        /*!re2c
+        ":status:" @as [^_]+ @ae "_" @bs [^:]+ @be ":" @cs  num @ce "\n" {
+            scores.Gametype = string(p.buf[as:ae])
+            scores.Map = string(p.buf[bs:be])
+            val, err := strconv.ParseInt(string(p.buf[cs:ce]), 10, 64)
+            if err != nil {
+                return nil, genError(err)
+            }
+            scores.GameTime = uint64(val)
+            continue
+        }
+        ":labels:player:" @as .+ @ae "\n" {
+            scores.PlayerLabels = strings.Split(strings.TrimSpace(string(p.buf[as:ae])), ",")
+            continue
+        }
+        ":labels:teamscores:" @as .+ @ae "\n" {
+            scores.TeamLabels = strings.Split(strings.TrimSpace(string(p.buf[as:ae])), ",")
+            continue
+        }
+        ":player:see-labels:" .+ "\n" {
+            // TODO: implement this
+            // THIS probably would require fixing on xonotic end as well
+            // https://github.com/xonotic/xonotic-data.pk3dir/blob/cc84ebedeb4523efb23fa8c5dd1e703cd0434a23/qcsrc/server/world.qc#L1255
+            // since console and eventlog outputs using different format
+            continue
+        }
+        ":teamscores:see-labels:" @as [0-9,]* @ae ":" @bs [0-9]* @be "\n" {
+            var teamScores []int64
+
+            if as == ae {
+                // scores is empty
+                continue
+            }
+
+            teamScoresStr := strings.Split(strings.TrimSpace(string(p.buf[as:ae])), ",")
+            for _, item := range teamScoresStr {
+                val, err := strconv.ParseInt(item, 10, 64)
+                if err != nil {
+                    return nil, genError(err)
+                }
+                teamScores = append(teamScores, val)
+            }
+            teamId, err := strconv.ParseInt(string(p.buf[bs:be]), 10, 64)
+            if err != nil {
+                return nil, genError(err)
+            }
+            scores.TeamScores[int(teamId)] = teamScores
+            continue
+        }
+        ":end\n" {
+            return &scores, nil
+        }
+        * { return &scores, genError(invalidInputError) }
+        $ { return &scores, genError(io.EOF)}
+        */
+    }
+    return &scores, nil
 }

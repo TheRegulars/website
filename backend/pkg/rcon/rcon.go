@@ -65,6 +65,15 @@ type ServerInfo struct {
 	ScoreString       string `json:"score_string"`
 }
 
+type ServerScores struct {
+	Gametype     string
+	Map          string
+	GameTime     uint64
+	PlayerLabels []string
+	TeamLabels   []string
+	TeamScores   map[int][]int64
+}
+
 type PlayerStats struct {
 	Bots       int
 	Spectators int
@@ -182,6 +191,15 @@ func QueryRconInfo(server *ServerConfig, deadline time.Time) (*ServerInfo, error
 	}
 	defer reader.Close()
 	return ParseServerInfo(reader)
+}
+
+func QueryScores(server *ServerConfig, deadline time.Time) (*ServerScores, error) {
+	reader, err := rconExecute(server, deadline, "sv_cmd printstats")
+	if err != nil {
+		return nil, err
+	}
+	defer reader.Close()
+	return ParseScores(reader)
 }
 
 func PingServer(server *ServerConfig, deadline time.Time) (time.Duration, error) {

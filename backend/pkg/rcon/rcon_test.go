@@ -1,6 +1,7 @@
 package rcon
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -37,6 +38,34 @@ total allocated size: 1180312470 bytes (1125.634MB)
 `
 
 var worldstatus string = `nb:git:P19:S11:F3:TINVALID:MXPM::goals!!:goals!!:5:0:14:0`
+
+var playerScores string = `:status:ctf_Spectrum_2:122
+:labels:player:score!!,caps!,accuracy,,captime<,drops<,fckills,pickups,returns,deaths<,dmg,dmgtaken<,,,elo,,,,,,,,,,,,,,,kills,,,,,,,,,,,,,,spawnkilled,spawnkills,suicides<,,teamkills<
+:player:see-labels:0,0,0,0,0,0,0,0,0,0,0,0,0,0,-2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0:117:spectator:https://somelink.example
+:player:see-labels:40,1,9.999999,0,824,5,3,5,0,3,400,300,0,0,707.101013,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0:118:5:foobar
+:player:see-labels:49,1,29,0,499,6,4,8,3,6,400,600,0,0,1630.641602,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0:118:14:Player nick
+:player:see-labels:8,0,4,0,0,1,1,1,1,7,100,700,0,0,535.887085,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0:98:14:Player3
+:player:see-labels:8,0,13,0,0,2,1,3,1,2,200,200,0,0,-2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0:97:5:Player4
+:player:see-labels:43,1,22.999998,0,1520,0,2,1,2,0,700,0,0,0,766.241943,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0:116:5:Nick
+:labels:teamscores:caps!!,score
+:teamscores:see-labels::1
+:teamscores:see-labels::2
+:teamscores:see-labels::3
+:teamscores:see-labels::4
+:teamscores:see-labels:2,91:5
+:teamscores:see-labels::6
+:teamscores:see-labels::7
+:teamscores:see-labels::8
+:teamscores:see-labels::9
+:teamscores:see-labels::10
+:teamscores:see-labels::11
+:teamscores:see-labels::12
+:teamscores:see-labels::13
+:teamscores:see-labels:1,57:14
+:teamscores:see-labels::15
+:end
+stats dumped.
+`
 
 func TestParseStatusEmpty(t *testing.T) {
 	reader := strings.NewReader(emptyServer)
@@ -154,6 +183,31 @@ func TestParseInfo(t *testing.T) {
 	}
 }
 
+func TestParseScores(t *testing.T) {
+	reader := strings.NewReader(playerScores)
+	scores, err := ParseScores(reader)
+	if err != nil {
+		t.Error("Erroring during parsing ", err)
+	}
+	if scores.Gametype != "ctf" || scores.Map != "Spectrum_2" || scores.GameTime != 122 {
+		t.Error("Incorrectly parsed ServerScores ", scores)
+	}
+	teamScores, ok := scores.TeamScores[5]
+	if !ok {
+		t.Error("There is no team 5 in teamScores ", scores.TeamScores)
+	}
+	if !reflect.DeepEqual(teamScores, []int64{2, 91}) {
+		t.Error("Incorrect team score for team 5 ", teamScores)
+	}
+	teamScores, ok = scores.TeamScores[14]
+	if !ok {
+		t.Error("There is no team 14 in teamScores ", scores.TeamScores)
+	}
+	if !reflect.DeepEqual(teamScores, []int64{1, 57}) {
+		t.Error("Incorrect team score for team 14 ", teamScores)
+	}
+}
+
 func FuzzParseMemstats(f *testing.F) {
 	f.Add(memstatsRcon)
 
@@ -170,6 +224,15 @@ func FuzzParseStatus(f *testing.F) {
 	f.Fuzz(func(t *testing.T, in string) {
 		reader := strings.NewReader(in)
 		ParseStatus(reader)
+	})
+}
+
+func FuzzParseScores(f *testing.F) {
+	f.Add(playerScores)
+
+	f.Fuzz(func(t *testing.T, in string) {
+		reader := strings.NewReader(in)
+		ParseScores(reader)
 	})
 }
 
