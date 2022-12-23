@@ -18,6 +18,7 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -157,7 +158,11 @@ func server(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Server not found", http.StatusNotFound)
 		return
 	}
-	status, err := rcon.QueryRconServer(serverConf, time.Millisecond*1000, 3)
+	status, err := rcon.QueryWithRetries(time.Millisecond*1000, 3,
+		func(deadline time.Time) (*rcon.ServerStatus, error) {
+			return rcon.QueryRconStatus(&serverConf, deadline)
+		})
+
 	if err != nil {
 		http.Error(w, "Can't load data from server", http.StatusInternalServerError)
 		return
@@ -171,7 +176,6 @@ func server(w http.ResponseWriter, r *http.Request) {
 	w.Write(json)
 }
 
-// TODO: DRY
 func info(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var info *rcon.ServerInfo
@@ -183,15 +187,10 @@ func info(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Server not found", http.StatusNotFound)
 		return
 	}
-	// TODO: refactor retries
-	// TODO: configurable retries
-	for i := 0; i < 3; i++ {
-		deadline := time.Now().Add(time.Millisecond * 1000)
-		info, err = rcon.QueryRconInfo(&serverConf, deadline)
-		if err == nil {
-			break
-		}
-	}
+	info, err = rcon.QueryWithRetries(time.Millisecond*1000, 3,
+		func(deadline time.Time) (*rcon.ServerInfo, error) {
+			return rcon.QueryRconInfo(&serverConf, deadline)
+		})
 	if err != nil {
 		http.Error(w, "Can't load data from server", http.StatusInternalServerError)
 		return
@@ -205,10 +204,11 @@ func info(w http.ResponseWriter, r *http.Request) {
 	w.Write(json)
 }
 
-// TODO: parallel query
 func serverAll(w http.ResponseWriter, r *http.Request) {
-	var infoErr error
+	var wg sync.WaitGroup
+	var infoErr, err error
 	var info *rcon.ServerInfo
+	var status *rcon.ServerStatus
 
 	conf := getConfig()
 	serverName := chi.URLParam(r, "server")
@@ -217,20 +217,25 @@ func serverAll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Server not found", http.StatusNotFound)
 		return
 	}
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		info, infoErr = rcon.QueryWithRetries(time.Millisecond*1000, 3,
+			func(deadline time.Time) (*rcon.ServerInfo, error) {
+				return rcon.QueryRconInfo(&serverConf, deadline)
+			})
+	}()
 
-	for i := 0; i < 3; i++ {
-		deadline := time.Now().Add(time.Millisecond * 1000)
-		info, infoErr = rcon.QueryRconInfo(&serverConf, deadline)
-		if infoErr == nil {
-			break
-		}
-	}
-	if infoErr != nil {
-		http.Error(w, "Can't load data from server", http.StatusInternalServerError)
-		return
-	}
-	status, err := rcon.QueryRconServer(serverConf, time.Millisecond*1000, 3)
-	if err != nil {
+	go func() {
+		defer wg.Done()
+		status, err = rcon.QueryWithRetries(time.Millisecond*1000, 3,
+			func(deadline time.Time) (*rcon.ServerStatus, error) {
+				return rcon.QueryRconStatus(&serverConf, deadline)
+			})
+	}()
+
+	wg.Wait()
+	if err != nil || infoErr != nil {
 		http.Error(w, "Can't load data from server", http.StatusInternalServerError)
 		return
 	}

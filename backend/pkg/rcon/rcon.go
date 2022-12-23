@@ -235,20 +235,21 @@ func QueryRconMemstats(server *ServerConfig, deadline time.Time) (*ServerMemstat
 	return ParseMemstats(reader)
 }
 
-func QueryRconServer(conf ServerConfig, timeout time.Duration, retries int) (*ServerStatus, error) {
-	var status *ServerStatus
+type Retryable[T any] func(deadline time.Time) (T, error)
+
+func QueryWithRetries[T any](timeout time.Duration, retries int, fn Retryable[T]) (T, error) {
+	var result T
 	var err error
 
 	for i := 0; i < retries; i++ {
 		deadline := time.Now().Add(timeout)
-		status, err = QueryRconStatus(&conf, deadline)
+		result, err = fn(deadline)
 		if err == nil {
-			return status, nil
+			return result, nil
 		}
 		log.Printf("rcon error: %v", err)
 	}
-
-	return status, err
+	return result, err
 }
 
 func QueryServerMetrics(server ServerConfig, timeout time.Duration, retries int) (*ServerMetrics, error) {
