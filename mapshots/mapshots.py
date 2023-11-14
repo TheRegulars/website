@@ -202,6 +202,7 @@ def has_alpha(img):
 
 def generate_mapshots(pk3_filepath, upload_callback):
     maps = set([])
+    maps_orig = set([])
     mapshots = defaultdict(dict)
     found_mapshots = {}
 
@@ -209,6 +210,7 @@ def generate_mapshots(pk3_filepath, upload_callback):
         for filename, obj_type, mapname in iterate_pk3_objects(zip_file):
             if obj_type == MapObjects.BSP:
                 maps.add(mapname.lower())
+                maps_orig.add(mapname)
             elif obj_type == MapObjects.SCREENSHOT:
                 mapshot_type = get_mapshot_type(filename)
                 mapshots[mapshot_type][mapname.lower()] = filename
@@ -260,14 +262,16 @@ def generate_mapshots(pk3_filepath, upload_callback):
 
                     logger.info("Uploading %r, from pk3: %s", mapshot_filename, pk3_filepath)
                     output_image.seek(0, io.SEEK_SET)  # reset buffer to start
-                    upload_callback(mapshot_filename, output_image)
+                    upload_callback(mapshot_filename, output_image, mapname)
 
                 with io.BytesIO() as output_image:
                     mapshot_filename = "{mapname}.webp".format(mapname=mapname)
                     img.save(output_image, format='WEBP', method=6, quality=80)
                     output_image.seek(0, io.SEEK_SET)
                     logger.info("Uploading %r, from pk3: %s", mapshot_filename, pk3_filepath)
-                    upload_callback(mapshot_filename, output_image)
+                    upload_callback(mapshot_filename, output_image, mapname)
+
+    return list(maps_orig)
 
 
 def main():
@@ -302,7 +306,7 @@ def main():
         try:
             storage = thread_local_storage()
 
-            def upload_callback(filename, fileobj):
+            def upload_callback(filename, fileobj, mapname):
                 storage.upload(filename, fileobj)
                 if args.cleanup:
                     # TODO: this could require lock for some python implementations
