@@ -38,6 +38,7 @@ type Config struct {
 type ServerAll struct {
 	*rcon.ServerStatus
 	Info *rcon.ServerInfo `json:"info"`
+	Scores *rcon.ServerScores `json:"scores"`
 }
 
 //go:embed config_schema.json
@@ -204,11 +205,9 @@ func info(w http.ResponseWriter, r *http.Request) {
 	w.Write(json)
 }
 
-func serverAll(w http.ResponseWriter, r *http.Request) {
-	var wg sync.WaitGroup
-	var infoErr, err error
-	var info *rcon.ServerInfo
-	var status *rcon.ServerStatus
+func scores(w http.ResponseWriter, r *http.Request) {
+	var err error
+	var scores *rcon.ServerScores
 
 	conf := getConfig()
 	serverName := chi.URLParam(r, "server")
@@ -217,7 +216,38 @@ func serverAll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Server not found", http.StatusNotFound)
 		return
 	}
-	wg.Add(2)
+	scores, err = rcon.QueryWithRetries(time.Millisecond*1000, 3,
+		func(deadline time.Time) (*rcon.ServerScores, error) {
+			return rcon.QueryRconScores(&serverConf, deadline)
+		})
+	if err != nil {
+		http.Error(w, "Can't load data from server", http.StatusInternalServerError)
+		return
+	}
+	json, err := json.Marshal(scores)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(json)
+}
+
+func serverAll(w http.ResponseWriter, r *http.Request) {
+	var wg sync.WaitGroup
+	var infoErr, err error
+	var info *rcon.ServerInfo
+	var status *rcon.ServerStatus
+	var scores *rcon.ServerScores
+
+	conf := getConfig()
+	serverName := chi.URLParam(r, "server")
+	serverConf, ok := conf.Servers[serverName]
+	if !ok {
+		http.Error(w, "Server not found", http.StatusNotFound)
+		return
+	}
+	wg.Add(3)
 	go func() {
 		defer wg.Done()
 		info, infoErr = rcon.QueryWithRetries(time.Millisecond*1000, 3,
@@ -233,6 +263,13 @@ func serverAll(w http.ResponseWriter, r *http.Request) {
 				return rcon.QueryRconStatus(&serverConf, deadline)
 			})
 	}()
+	go func() {
+		defer wg.Done()
+		scores, err = rcon.QueryWithRetries(time.Millisecond*1000, 3,
+			func(deadline time.Time) (*rcon.ServerScores, error) {
+				return rcon.QueryRconScores(&serverConf, deadline)
+			})
+	}()
 
 	wg.Wait()
 	if err != nil || infoErr != nil {
@@ -242,6 +279,7 @@ func serverAll(w http.ResponseWriter, r *http.Request) {
 	json, err := json.Marshal(ServerAll{
 		ServerStatus: status,
 		Info:         info,
+		Scores:       scores,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -379,6 +417,7 @@ func webService() http.Handler {
 	r.Get("/servers/{server}", serverAll)
 	r.Get("/servers/{server}/status", server)
 	r.Get("/servers/{server}/info", info)
+	r.Get("/servers/{server}/scores", scores)
 	r.Get("/exporters", exporters)
 	r.Get("/metrics", metrics)
 	r.Get("/maps", maps)

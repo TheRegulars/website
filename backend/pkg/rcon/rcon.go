@@ -65,13 +65,22 @@ type ServerInfo struct {
 	ScoreString       string `json:"score_string"`
 }
 
+type PlayerScores struct {
+	PlayerId int32 `json:"id"`
+	Name string `json:"name"`
+	Team int32 `json:"team_id"`
+	PlayingTime int64 `json:"playing_time"`
+	Scores []float64 `json:"scores"`
+}
+
 type ServerScores struct {
-	Gametype     string
-	Map          string
-	GameTime     uint64
-	PlayerLabels []string
-	TeamLabels   []string
-	TeamScores   map[int][]int64
+	Gametype     string `json:"gametype"`
+	Map          string `json:"map"`
+	GameTime     uint64 `json:"game_time"`
+	PlayerLabels []string `json:"player_labels"`
+	TeamLabels   []string `json:"team_labels"`
+	TeamScores   map[int][]int64 `json:"team_scores"`
+	Players      []PlayerScores `json:"players"`
 }
 
 type PlayerStats struct {
@@ -193,7 +202,7 @@ func QueryRconInfo(server *ServerConfig, deadline time.Time) (*ServerInfo, error
 	return ParseServerInfo(reader)
 }
 
-func QueryScores(server *ServerConfig, deadline time.Time) (*ServerScores, error) {
+func QueryRconScores(server *ServerConfig, deadline time.Time) (*ServerScores, error) {
 	reader, err := rconExecute(server, deadline, "sv_cmd printstats")
 	if err != nil {
 		return nil, err
