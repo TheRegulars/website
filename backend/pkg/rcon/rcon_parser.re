@@ -655,7 +655,7 @@ func ParseScores(r io.Reader) (*ServerScores, error) {
             scores.Players = append(scores.Players, player)
             continue
         }
-        (!"^7")? ":teamscores:see-labels:" @as [0-9,]* @ae ":" @bs [0-9]* @be "\n" {
+        (!"^7")? ":teamscores:see-labels:" @as [0-9,-]* @ae ":" @bs [0-9]* @be "\n" {
             var teamScores []int64
 
             if as == ae {

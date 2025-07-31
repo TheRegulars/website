@@ -61,7 +61,7 @@ var playerScores string = `:status:ctf_Spectrum_2:122
 :teamscores:see-labels::11
 :teamscores:see-labels::12
 :teamscores:see-labels::13
-:teamscores:see-labels:1,57:14
+:teamscores:see-labels:1,-57:14
 :teamscores:see-labels::15
 :end
 stats dumped.
@@ -203,7 +203,7 @@ func TestParseScores(t *testing.T) {
 	if !ok {
 		t.Error("There is no team 14 in teamScores ", scores.TeamScores)
 	}
-	if !reflect.DeepEqual(teamScores, []int64{1, 57}) {
+	if !reflect.DeepEqual(teamScores, []int64{1, -57}) {
 		t.Error("Incorrect team score for team 14 ", teamScores)
 	}
 }
