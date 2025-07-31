@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -37,7 +36,7 @@ type Config struct {
 
 type ServerAll struct {
 	*rcon.ServerStatus
-	Info *rcon.ServerInfo `json:"info"`
+	Info   *rcon.ServerInfo   `json:"info"`
 	Scores *rcon.ServerScores `json:"scores"`
 }
 
@@ -47,6 +46,7 @@ var configSchema string
 var serverPort = flag.Int("port", 8080, "HTTP Server port")
 var serverHost = flag.String("addr", "", "Listen ip, empty by default")
 var shutdownTimeout = flag.Duration("shutdownTimeout", time.Second*10, "Timeout for gracefull shutdown")
+var pprofSockPath = flag.String("pprofSocket", "", "PProf UNIX socket path")
 
 var config atomic.Value
 
@@ -381,7 +381,7 @@ func validateConfig(conf *Config) bool {
 func loadConfig(filename string) (*Config, bool) {
 	var config Config
 
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		log.Printf("Error reading config: %v", err)
 		return nil, false
@@ -440,6 +440,9 @@ func main() {
 		os.Exit(1)
 	}
 	config.Store(conf)
+	if *pprofSockPath != "" {
+		ListenPProf(*pprofSockPath)
+	}
 	// init maps state
 	mapsState = new(MapsState)
 	mapsState.gameDirs = func() []string {

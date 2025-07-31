@@ -2,8 +2,8 @@ package main
 
 import (
 	"archive/zip"
-	"io/ioutil"
 	"log"
+	"os"
 	"path"
 	"regexp"
 	"sort"
@@ -31,7 +31,7 @@ func (s *MapsState) GetMapsSet() map[string]bool {
 	mapsFound := make(map[string]bool)
 	dirs := s.gameDirs()
 	for _, dir := range dirs {
-		files, err := ioutil.ReadDir(dir)
+		files, err := os.ReadDir(dir)
 		if err != nil {
 			log.Printf("Error reading dir: %v", err)
 			continue
@@ -40,8 +40,9 @@ func (s *MapsState) GetMapsSet() map[string]bool {
 			// TODO: add support for pk3dir too
 			if strings.HasSuffix(file.Name(), ".pk3") {
 				fullpath := path.Join(dir, file.Name())
-				if file.Mode().IsRegular() {
-					checkFiles[fullpath] = file.ModTime()
+				if file.Type().IsRegular() {
+					info, _ := file.Info()
+					checkFiles[fullpath] = info.ModTime()
 				}
 			}
 		}
