@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/TheRegulars/website/backend/pkg/rcon"
-	"github.com/go-chi/chi/v5"
 	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v2"
 )
@@ -43,15 +42,18 @@ type ServerAll struct {
 //go:embed config_schema.json
 var configSchema string
 
-var serverPort = flag.Int("port", 8080, "HTTP Server port")
-var serverHost = flag.String("addr", "", "Listen ip, empty by default")
-var shutdownTimeout = flag.Duration("shutdownTimeout", time.Second*10, "Timeout for gracefull shutdown")
-var pprofSockPath = flag.String("pprofSocket", "", "PProf UNIX socket path")
+var (
+	serverPort      = flag.Int("port", 8080, "HTTP Server port")
+	serverHost      = flag.String("addr", "", "Listen ip, empty by default")
+	shutdownTimeout = flag.Duration("shutdownTimeout", time.Second*10, "Timeout for gracefull shutdown")
+	pprofSockPath   = flag.String("pprofSocket", "", "PProf UNIX socket path")
+)
 
 var config atomic.Value
 
-var mapsState *MapsState
-var viewTemplates = template.Must(template.Must(template.New("exporters").Parse(`
+var (
+	mapsState     *MapsState
+	viewTemplates = template.Must(template.Must(template.New("exporters").Parse(`
 <html>
   <head>
     <title>Xonotic Exporter</title>
@@ -92,6 +94,7 @@ xonotic_memstats_allocated_size{instance="{{ .Name }}"} {{ .Metrics.Memory.Total
 # Network rtt {{ .Metrics.PingDuration }}
 xonotic_rtt{instance="{{ .Name }}", from="{{ .Hostname }}"} {{ .Metrics.PingSeconds }}
 `))
+)
 
 func healthz(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "OK\n")
@@ -153,7 +156,7 @@ func servers(w http.ResponseWriter, r *http.Request) {
 
 func server(w http.ResponseWriter, r *http.Request) {
 	conf := getConfig()
-	serverName := chi.URLParam(r, "server")
+	serverName := r.PathValue("server")
 	serverConf, ok := conf.Servers[serverName]
 	if !ok {
 		http.Error(w, "Server not found", http.StatusNotFound)
@@ -163,7 +166,6 @@ func server(w http.ResponseWriter, r *http.Request) {
 		func(deadline time.Time) (*rcon.ServerStatus, error) {
 			return rcon.QueryRconStatus(&serverConf, deadline)
 		})
-
 	if err != nil {
 		http.Error(w, "Can't load data from server", http.StatusInternalServerError)
 		return
@@ -182,7 +184,7 @@ func info(w http.ResponseWriter, r *http.Request) {
 	var info *rcon.ServerInfo
 
 	conf := getConfig()
-	serverName := chi.URLParam(r, "server")
+	serverName := r.PathValue("server")
 	serverConf, ok := conf.Servers[serverName]
 	if !ok {
 		http.Error(w, "Server not found", http.StatusNotFound)
@@ -210,7 +212,7 @@ func scores(w http.ResponseWriter, r *http.Request) {
 	var scores *rcon.ServerScores
 
 	conf := getConfig()
-	serverName := chi.URLParam(r, "server")
+	serverName := r.PathValue("server")
 	serverConf, ok := conf.Servers[serverName]
 	if !ok {
 		http.Error(w, "Server not found", http.StatusNotFound)
@@ -241,7 +243,7 @@ func serverAll(w http.ResponseWriter, r *http.Request) {
 	var scores *rcon.ServerScores
 
 	conf := getConfig()
-	serverName := chi.URLParam(r, "server")
+	serverName := r.PathValue("server")
 	serverConf, ok := conf.Servers[serverName]
 	if !ok {
 		http.Error(w, "Server not found", http.StatusNotFound)
@@ -410,18 +412,18 @@ func getConfig() *Config {
 }
 
 func webService() http.Handler {
-	r := chi.NewRouter()
-	r.Get("/healthz", healthz)
-	r.Get("/records", records)
-	r.Get("/servers", servers)
-	r.Get("/servers/{server}", serverAll)
-	r.Get("/servers/{server}/status", server)
-	r.Get("/servers/{server}/info", info)
-	r.Get("/servers/{server}/scores", scores)
-	r.Get("/exporters", exporters)
-	r.Get("/metrics", metrics)
-	r.Get("/maps", maps)
-	return r
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /healthz", healthz)
+	mux.HandleFunc("GET /records", records)
+	mux.HandleFunc("GET /servers", servers)
+	mux.HandleFunc("GET /maps", maps)
+	mux.HandleFunc("GET /servers/{server}", serverAll)
+	mux.HandleFunc("GET /servers/{server}/status", server)
+	mux.HandleFunc("GET /servers/{server}/info", info)
+	mux.HandleFunc("GET /servers/{server}/scores", scores)
+	mux.HandleFunc("GET /exporters", exporters)
+	mux.HandleFunc("GET /metrics", metrics)
+	return mux
 }
 
 func main() {
