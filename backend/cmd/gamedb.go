@@ -19,7 +19,7 @@ const (
 	captimeSuf        = "/captimerecord/time"
 )
 
-type DBCallback = func(key, value string, state interface{})
+type DBCallback[T any] func(key, value string, state T)
 
 type RecordItem struct {
 	Name  string  `json:"name"`
@@ -28,11 +28,7 @@ type RecordItem struct {
 
 type Records = map[string]*RecordItem
 
-func updateRecords(key, value string, istate interface{}) {
-	state, ok := istate.(Records)
-	if !ok {
-		return
-	}
+func updateRecords(key, value string, state Records) {
 	if strings.HasSuffix(key, captimeNetnameSuf) {
 		mapname := strings.TrimSuffix(key, captimeNetnameSuf)
 		item, ok := state[mapname]
@@ -69,7 +65,7 @@ func mergeRecords(main, temp Records) {
 	}
 }
 
-func ReadXonoticDB(filePath string, callback DBCallback, state interface{}) error {
+func ReadXonoticDB[T any](filePath string, callback DBCallback[T], state T) error {
 	var keyBuf, valueBuf bytes.Buffer
 
 	file, err := os.Open(filePath)
@@ -128,9 +124,9 @@ func ReadXonoticDB(filePath string, callback DBCallback, state interface{}) erro
 func ReadCaptimeRecordsWithFilter(fileList []string, filter func(key, value string) bool) (Records, error) {
 	records := make(Records)
 
-	callback := func(key, value string, istate interface{}) {
+	callback := func(key, value string, state Records) {
 		if filter(key, value) {
-			updateRecords(key, value, istate)
+			updateRecords(key, value, state)
 		}
 	}
 

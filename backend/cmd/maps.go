@@ -22,8 +22,6 @@ type PK3Info struct {
 	maps    []string
 }
 
-type MapnameCallback = func(key, value string, state interface{})
-
 var bspRe *regexp.Regexp = regexp.MustCompile(`^maps/([^/\\]+)\.bsp$`)
 
 func (s *MapsState) GetMapsSet() map[string]bool {
@@ -47,7 +45,7 @@ func (s *MapsState) GetMapsSet() map[string]bool {
 			}
 		}
 	}
-	iterateStoredMaps := func(key, value interface{}) bool {
+	iterateStoredMaps := func(key, value any) bool {
 		filepath, ok := key.(string)
 		if !ok {
 			// skip this
@@ -116,7 +114,7 @@ func (s *MapsState) GetMapsSet() map[string]bool {
 func (s *MapsState) ListMaps() []string {
 	mapsFound := s.GetMapsSet()
 	mapsList := make([]string, 0, len(mapsFound))
-	for mapname, _ := range mapsFound {
+	for mapname := range mapsFound {
 		mapsList = append(mapsList, mapname)
 	}
 	sort.Strings(mapsList)
@@ -125,7 +123,6 @@ func (s *MapsState) ListMaps() []string {
 
 func listPk3Maps(filename string, callback func(string) bool) error {
 	arc, err := zip.OpenReader(filename)
-
 	if err != nil {
 		return err
 	}
