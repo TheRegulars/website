@@ -534,7 +534,7 @@ export class StatusComponent extends LitElement {
                 <td>Max offset:</td><td><span class=${metricClass(offsetMax, 4.4, 8.2)}>${offsetMax} ms</span></td>
             </tr>
             <tr>
-                <td>Stddev offset:</td><td><span class=${metricClass(offsetSdev, 0.8, 1.2)}>${offsetAvg} ms</span></td>
+                <td>Stddev offset:</td><td><span class=${metricClass(offsetSdev, 0.8, 1.2)}>${offsetSdev} ms</span></td>
             </tr>`;
     }
 }
