@@ -1,4 +1,4 @@
-.PHONY: clean test fuzz-memstats fuzz-status bench default
+.PHONY: clean test fuzz-memstats fuzz-status bench default fuzz-scores
 
 RE2GO ?= re2go
 GO_FILES = $(wildcard cmd/*.go pkg/**/*.go)
