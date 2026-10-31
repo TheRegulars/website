@@ -17,13 +17,13 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
 
 	"github.com/TheRegulars/website/backend/pkg/rcon"
 	"github.com/xeipuuv/gojsonschema"
+	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v2"
 )
 
@@ -236,8 +236,7 @@ func scores(w http.ResponseWriter, r *http.Request) {
 }
 
 func serverAll(w http.ResponseWriter, r *http.Request) {
-	var wg sync.WaitGroup
-	var infoErr, err error
+	var g errgroup.Group
 	var info *rcon.ServerInfo
 	var status *rcon.ServerStatus
 	var scores *rcon.ServerScores
@@ -249,32 +248,29 @@ func serverAll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Server not found", http.StatusNotFound)
 		return
 	}
-	wg.Add(3)
-	go func() {
-		defer wg.Done()
-		info, infoErr = rcon.QueryWithRetries(time.Millisecond*1000, 3,
+	g.Go(func() (err error) {
+		info, err = rcon.QueryWithRetries(time.Millisecond*1000, 3,
 			func(deadline time.Time) (*rcon.ServerInfo, error) {
 				return rcon.QueryRconInfo(&serverConf, deadline)
 			})
-	}()
-
-	go func() {
-		defer wg.Done()
+		return err
+	})
+	g.Go(func() (err error) {
 		status, err = rcon.QueryWithRetries(time.Millisecond*1000, 3,
 			func(deadline time.Time) (*rcon.ServerStatus, error) {
 				return rcon.QueryRconStatus(&serverConf, deadline)
 			})
-	}()
-	go func() {
-		defer wg.Done()
+		return err
+	})
+	g.Go(func() (err error) {
 		scores, err = rcon.QueryWithRetries(time.Millisecond*1000, 3,
 			func(deadline time.Time) (*rcon.ServerScores, error) {
 				return rcon.QueryRconScores(&serverConf, deadline)
 			})
-	}()
+		return err
+	})
 
-	wg.Wait()
-	if err != nil || infoErr != nil {
+	if err := g.Wait(); err != nil {
 		http.Error(w, "Can't load data from server", http.StatusInternalServerError)
 		return
 	}
