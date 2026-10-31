@@ -19,6 +19,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"syscall"
+	texttemplate "text/template"
 	"time"
 
 	"github.com/TheRegulars/website/backend/pkg/rcon"
@@ -52,8 +53,8 @@ var (
 var config atomic.Value
 
 var (
-	mapsState     *MapsState
-	viewTemplates = template.Must(template.Must(template.New("exporters").Parse(`
+	mapsState         *MapsState
+	exportersTemplate = template.Must(template.New("exporters").Parse(`
 <html>
   <head>
     <title>Xonotic Exporter</title>
@@ -65,36 +66,46 @@ var (
 	</ul>
   </body>
 </html>
-`)).New("metrics").Parse(`
+`))
+	metricsTemplate = texttemplate.Must(texttemplate.New("metrics").Funcs(texttemplate.FuncMap{
+		"label": escapeLabelValue,
+	}).Parse(`
 # server: {{ .Name }}
 {{if .Metrics.Status}}
 # hostname: {{ .Metrics.Status.Hostname }}
-# map: powerstation_r2
-xonotic_sv_public{instance="{{ .Name }}"} {{ .Metrics.Status.Public }}
+# map: {{ .Metrics.Status.Map }}
+xonotic_sv_public{instance="{{ label .Name }}"} {{ .Metrics.Status.Public }}
 
 # Players info
-xonotic_players_count{instance="{{ .Name }}"} {{ .Metrics.Status.PlayersActive }}
-xonotic_players_max{instance="{{ .Name }}"} {{ .Metrics.Status.PlayersMax }}
-xonotic_players_bots{instance="{{ .Name }}"} {{ .Metrics.PlayersInfo.Bots }}
-xonotic_players_spectators{instance="{{ .Name }}"} {{ .Metrics.PlayersInfo.Spectators }}
-xonotic_players_active{instance="{{ .Name }}"} {{ .Metrics.PlayersInfo.Active }}
+xonotic_players_count{instance="{{ label .Name }}"} {{ .Metrics.Status.PlayersActive }}
+xonotic_players_max{instance="{{ label .Name }}"} {{ .Metrics.Status.PlayersMax }}
+xonotic_players_bots{instance="{{ label .Name }}"} {{ .Metrics.PlayersInfo.Bots }}
+xonotic_players_spectators{instance="{{ label .Name }}"} {{ .Metrics.PlayersInfo.Spectators }}
+xonotic_players_active{instance="{{ label .Name }}"} {{ .Metrics.PlayersInfo.Active }}
 
 # Performance timings
-xonotic_timing_cpu{instance="{{ .Name }}"} {{ .Metrics.Status.Timing.CPU }}
-xonotic_timing_lost{instance="{{ .Name }}"} {{ .Metrics.Status.Timing.Lost }}
-xonotic_timing_offset_avg{instance="{{ .Name }}"} {{ .Metrics.Status.Timing.OffsetAvg }}
-xonotic_timing_max{instance="{{ .Name }}"} {{ .Metrics.Status.Timing.OffsetMax }}
-xonotic_timing_sdev{instance="{{ .Name }}"} {{ .Metrics.Status.Timing.OffsetSdev }}
+xonotic_timing_cpu{instance="{{ label .Name }}"} {{ .Metrics.Status.Timing.CPU }}
+xonotic_timing_lost{instance="{{ label .Name }}"} {{ .Metrics.Status.Timing.Lost }}
+xonotic_timing_offset_avg{instance="{{ label .Name }}"} {{ .Metrics.Status.Timing.OffsetAvg }}
+xonotic_timing_max{instance="{{ label .Name }}"} {{ .Metrics.Status.Timing.OffsetMax }}
+xonotic_timing_sdev{instance="{{ label .Name }}"} {{ .Metrics.Status.Timing.OffsetSdev }}
 {{end}}{{if .Metrics.Memory}}
 # Memory
-xonotic_memstats_pools_count{instance="{{ .Name }}"} {{ .Metrics.Memory.PoolsCount }}
-xonotic_memstats_pools_total{instance="{{ .Name }}"} {{ .Metrics.Memory.PoolsTotal }}
-xonotic_memstats_allocated_size{instance="{{ .Name }}"} {{ .Metrics.Memory.TotalAllocatedSize }}
+xonotic_memstats_pools_count{instance="{{ label .Name }}"} {{ .Metrics.Memory.PoolsCount }}
+xonotic_memstats_pools_total{instance="{{ label .Name }}"} {{ .Metrics.Memory.PoolsTotal }}
+xonotic_memstats_allocated_size{instance="{{ label .Name }}"} {{ .Metrics.Memory.TotalAllocatedSize }}
 {{end}}
 # Network rtt {{ .Metrics.PingDuration }}
-xonotic_rtt{instance="{{ .Name }}", from="{{ .Hostname }}"} {{ .Metrics.PingSeconds }}
+xonotic_rtt{instance="{{ label .Name }}", from="{{ label .Hostname }}"} {{ .Metrics.PingSeconds }}
 `))
 )
+
+var labelValueEscaper = strings.NewReplacer(`\`, `\\`, `"`, `\"`, "\n", `\n`)
+
+// escapeLabelValue escapes a Prometheus label value.
+func escapeLabelValue(s string) string {
+	return labelValueEscaper.Replace(s)
+}
 
 func healthz(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "OK\n")
@@ -294,7 +305,7 @@ func exporters(w http.ResponseWriter, r *http.Request) {
 	for k := range conf.Servers {
 		servers = append(servers, k)
 	}
-	err := viewTemplates.ExecuteTemplate(w, "exporters", servers)
+	err := exportersTemplate.Execute(w, servers)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -332,7 +343,7 @@ func metrics(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		goto ErrorHandler
 	}
-	err = viewTemplates.ExecuteTemplate(w, "metrics", templateContext)
+	err = metricsTemplate.Execute(w, templateContext)
 	if err != nil {
 		goto ErrorHandler
 	}
