@@ -1,5 +1,5 @@
 {
-    "$schema": "http://json-schema.org/draft-05/schema#",
+    "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "Xonotic API configuration schema",
     "type": "object",
     "properties": {
@@ -7,10 +7,11 @@
             "type": "object",
             "minProperties": 1,
             "patternProperties": {
-                "[0-9A-Za-z]([0-9A-Za-z\\-\\._]*[0-9A-Za-z])?": {
+                "^[0-9A-Za-z]([0-9A-Za-z\\-\\._]*[0-9A-Za-z])?$": {
                     "$ref": "#/definitions/server"
                 }
-            }
+            },
+            "additionalProperties": false
         },
         "gamedb": {
             "type": "array",
