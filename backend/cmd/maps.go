@@ -4,7 +4,7 @@ import (
 	"archive/zip"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -13,22 +13,22 @@ import (
 )
 
 type MapsState struct {
-	gameDirs  func() []string
-	mapsCache sync.Map
+	gameDirs func() []string
+	pk3Cache sync.Map
 }
 
 type PK3Info struct {
 	modTime time.Time
+	size    int64
 	maps    []string
 }
 
-var bspRe *regexp.Regexp = regexp.MustCompile(`^maps/([^/\\]+)\.bsp$`)
+var bspRe *regexp.Regexp = regexp.MustCompile(`(?i)^maps/([^/\\]+)\.bsp$`)
 
-func (s *MapsState) GetMapsSet() map[string]bool {
-	checkFiles := make(map[string]time.Time)
-	mapsFound := make(map[string]bool)
-	dirs := s.gameDirs()
-	for _, dir := range dirs {
+func (s *MapsState) GetMapsSet() map[string]struct{} {
+	pk3sFound := make(map[string]bool)
+	mapsFound := make(map[string]struct{})
+	for _, dir := range s.gameDirs() {
 		files, err := os.ReadDir(dir)
 		if err != nil {
 			log.Printf("Error reading dir: %v", err)
@@ -36,79 +36,57 @@ func (s *MapsState) GetMapsSet() map[string]bool {
 		}
 		for _, file := range files {
 			// TODO: add support for pk3dir too
-			if strings.HasSuffix(file.Name(), ".pk3") {
-				fullpath := path.Join(dir, file.Name())
-				if file.Type().IsRegular() {
-					info, _ := file.Info()
-					checkFiles[fullpath] = info.ModTime()
+			if strings.EqualFold(filepath.Ext(file.Name()), ".pk3") && file.Type().IsRegular() {
+				fullpath := filepath.Join(dir, file.Name())
+				stat, err := file.Info()
+				if err != nil {
+					// e.g. the pk3 was removed after ReadDir
+					log.Printf("Can't stat %s: %v", fullpath, err)
+					continue
+				}
+				pk3sFound[fullpath] = true
+				var info *PK3Info
+				if value, ok := s.pk3Cache.Load(fullpath); ok {
+					info = value.(*PK3Info)
+				}
+				// pk3 got changed
+				if info == nil || !info.modTime.Equal(stat.ModTime()) || info.size != stat.Size() {
+					info, err = loadPK3Info(fullpath, stat)
+					if err != nil {
+						log.Printf("Can't load maps from %s %v", fullpath, err)
+						s.pk3Cache.Delete(fullpath)
+						continue
+					}
+					s.pk3Cache.Store(fullpath, info)
+				}
+				for _, mapname := range info.maps {
+					mapsFound[mapname] = struct{}{}
 				}
 			}
 		}
 	}
-	iterateStoredMaps := func(key, value any) bool {
-		filepath, ok := key.(string)
-		if !ok {
-			// skip this
-			return true
-		}
-		info, ok := value.(*PK3Info)
-		if !ok {
-			return true
-		}
-		modtime, ok := checkFiles[filepath]
-		if !ok {
-			// this map was removed
-			s.mapsCache.Delete(key)
-			return true
-		}
-
-		if modtime.After(info.modTime) {
-			var newInfo PK3Info
-			// file was updated, so we need to update maps from this file
-			newInfo.maps = nil
-			callback := func(mapname string) bool {
-				newInfo.maps = append(newInfo.maps, mapname)
-				return true
-			}
-			err := listPk3Maps(filepath, callback)
-			if err != nil {
-				// we can't load maps for this file
-				log.Printf("Can't load maps from %s %v", filepath, err)
-				s.mapsCache.Delete(key)
-				delete(checkFiles, filepath)
-				return true
-			}
-
-			newInfo.modTime = modtime
-			s.mapsCache.Store(key, &newInfo)
-			info = &newInfo
-		}
-		delete(checkFiles, filepath)
-		for _, mapname := range info.maps {
-			mapsFound[mapname] = true
+	// forget pk3s that were removed
+	s.pk3Cache.Range(func(key, _ any) bool {
+		if !pk3sFound[key.(string)] {
+			s.pk3Cache.Delete(key)
 		}
 		return true
-	}
-	s.mapsCache.Range(iterateStoredMaps)
-	for filepath, modtime := range checkFiles {
-		var newInfo PK3Info
-		newInfo.modTime = modtime
-		callback := func(mapname string) bool {
-			newInfo.maps = append(newInfo.maps, mapname)
-			return true
-		}
-		err := listPk3Maps(filepath, callback)
-		if err != nil {
-			log.Printf("Can't load maps from %s %v", filepath, err)
-		}
-		s.mapsCache.Store(filepath, newInfo)
-		for _, mapname := range newInfo.maps {
-			mapsFound[mapname] = true
-		}
-	}
+	})
 	// ignore special map for hud setup
 	delete(mapsFound, "_hudsetup")
 	return mapsFound
+}
+
+func loadPK3Info(filename string, stat os.FileInfo) (*PK3Info, error) {
+	info := &PK3Info{modTime: stat.ModTime(), size: stat.Size()}
+	err := listPk3Maps(filename, func(mapname string) bool {
+		info.maps = append(info.maps, mapname)
+		return true
+	})
+	if err != nil {
+		return nil, err
+	}
+	return info, nil
 }
 
 func (s *MapsState) ListMaps() []string {
