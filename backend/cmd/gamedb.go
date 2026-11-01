@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"io"
 	"log"
 	"net/url"
 	"os"
@@ -76,7 +77,8 @@ func ReadXonoticDB[T any](filePath string, callback DBCallback[T], state T) erro
 	reader := bufio.NewReader(file)
 	parserState := pInitialState
 	consumeItem := func() {
-
+		defer keyBuf.Reset()
+		defer valueBuf.Reset()
 		if parserState != pValueInput {
 			// we are called from invalid state, ignore
 			return
@@ -84,18 +86,19 @@ func ReadXonoticDB[T any](filePath string, callback DBCallback[T], state T) erro
 
 		valueStr, err := url.QueryUnescape(valueBuf.String())
 		if err != nil {
-			log.Printf("Uneable to parse gamedb value: %v", err)
+			log.Printf("Unable to parse gamedb value: %v", err)
 			return
 		}
 		callback(keyBuf.String(), valueStr, state)
-		keyBuf.Reset()
-		valueBuf.Reset()
 	}
 	for {
 		b, err := reader.ReadByte()
 		if err != nil {
-			// reached end of file
-			break
+			if err == io.EOF {
+				// reached end of file
+				break
+			}
+			return err
 		}
 		switch b {
 		case '\n':
@@ -118,6 +121,7 @@ func ReadXonoticDB[T any](filePath string, callback DBCallback[T], state T) erro
 			}
 		}
 	}
+	consumeItem()
 	return nil
 }
 
