@@ -7,8 +7,9 @@ import (
 	"log"
 	"net"
 	"strconv"
-	"sync"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -263,74 +264,53 @@ func QueryWithRetries[T any](timeout time.Duration, retries int, fn Retryable[T]
 
 func QueryServerMetrics(server ServerConfig, timeout time.Duration, retries int) (*ServerMetrics, error) {
 	var metrics ServerMetrics
-	var wg sync.WaitGroup
-	var statusErr error
-	var pingErr error
-	var memstatsErr error
+	var g errgroup.Group
 
-	metrics.PlayersInfo.Bots = 0
-	metrics.PlayersInfo.Spectators = 0
-	metrics.PlayersInfo.Active = 0
-
-	wg.Add(3)
-	go func(s *ServerConfig, retries int) {
-		defer wg.Done()
-		for i := 0; i < retries; i++ {
-			deadline := time.Now().Add(timeout)
-			status, statusErr := QueryRconStatus(s, deadline)
-			if statusErr == nil {
-				metrics.Status = status
-				for _, p := range status.Players {
-					if p.IsBot {
-						metrics.PlayersInfo.Bots++
-					}
-
-					if p.Frags == -666 {
-						metrics.PlayersInfo.Spectators++
-					} else {
-						metrics.PlayersInfo.Active++
-					}
-				}
-				return
+	g.Go(func() error {
+		status, err := QueryWithRetries(timeout, retries, func(deadline time.Time) (*ServerStatus, error) {
+			return QueryRconStatus(&server, deadline)
+		})
+		if err != nil {
+			return err
+		}
+		metrics.Status = status
+		for _, p := range status.Players {
+			if p.IsBot {
+				metrics.PlayersInfo.Bots++
 			}
-			log.Printf("rcon error: %v", statusErr)
-		}
-	}(&server, retries)
 
-	go func(s *ServerConfig, retries int) {
-		defer wg.Done()
-		for i := 0; i < retries; i++ {
-			deadline := time.Now().Add(timeout)
-			d, pingErr := PingServer(s, deadline)
-			if pingErr == nil {
-				metrics.PingDuration = d
-				metrics.PingSeconds = float64(d) / float64(time.Second)
-				return
+			if p.Frags == -666 {
+				metrics.PlayersInfo.Spectators++
+			} else {
+				metrics.PlayersInfo.Active++
 			}
-			log.Printf("ping error: %v", pingErr)
 		}
-	}(&server, retries)
+		return nil
+	})
+	g.Go(func() error {
+		d, err := QueryWithRetries(timeout, retries, func(deadline time.Time) (time.Duration, error) {
+			return PingServer(&server, deadline)
+		})
+		if err != nil {
+			return err
+		}
+		metrics.PingDuration = d
+		metrics.PingSeconds = float64(d) / float64(time.Second)
+		return nil
+	})
+	g.Go(func() error {
+		mem, err := QueryWithRetries(timeout, retries, func(deadline time.Time) (*ServerMemstats, error) {
+			return QueryRconMemstats(&server, deadline)
+		})
+		if err != nil {
+			return err
+		}
+		metrics.Memory = mem
+		return nil
+	})
 
-	go func(s *ServerConfig, retries int) {
-		defer wg.Done()
-		for i := 0; i < retries; i++ {
-			deadline := time.Now().Add(timeout)
-			mem, memstatsErr := QueryRconMemstats(s, deadline)
-			if memstatsErr == nil {
-				metrics.Memory = mem
-				return
-			}
-			log.Printf("memstats error: %v", memstatsErr)
-		}
-	}(&server, retries)
-	wg.Wait()
-	err := statusErr
-	if err == nil {
-		if pingErr != nil {
-			err = pingErr
-		} else {
-			err = memstatsErr
-		}
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
-	return &metrics, err
+	return &metrics, nil
 }
