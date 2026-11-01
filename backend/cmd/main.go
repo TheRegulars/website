@@ -25,8 +25,8 @@ import (
 
 	"github.com/TheRegulars/website/backend/pkg/rcon"
 	"github.com/xeipuuv/gojsonschema"
+	"go.yaml.in/yaml/v3"
 	"golang.org/x/sync/errgroup"
-	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
