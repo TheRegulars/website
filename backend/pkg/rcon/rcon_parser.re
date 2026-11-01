@@ -22,6 +22,7 @@ type readProcessor struct {
 	tok    int
 	lim    int
 	eof    bool
+	err    error
 	/*!stags:re2c format = "\t@@ int\n"; */
 }
 
@@ -60,6 +61,7 @@ func fillReadProcessor(p *readProcessor) bool {
 			if err == io.EOF {
 				p.eof = true
 			} else {
+				p.err = err
 				return false
 			}
 		}
@@ -74,6 +76,14 @@ func fillReadProcessor(p *readProcessor) bool {
 	}
 	log.Printf("Read processor got %d empty reads in a row", maxEmptyReads)
 	return false
+}
+
+// errOr returns the read error that cut the input short, if any, and e otherwise.
+func (p *readProcessor) errOr(e error) error {
+	if p.err != nil {
+		return p.err
+	}
+	return e
 }
 
 func ParseMemstats(r io.Reader) (*ServerMemstats, error) {
@@ -118,8 +128,8 @@ func ParseMemstats(r io.Reader) (*ServerMemstats, error) {
 		stats.PoolsCount = int32(val)
 		goto total
 	}
-	* { return nil, genErr1(invalidInputError) }
-	$ { return nil, genErr1(io.EOF) }
+	* { return nil, genErr1(p.errOr(invalidInputError)) }
+	$ { return nil, genErr1(p.errOr(io.EOF)) }
 	*/
 total:
 	p.tok = p.cur
@@ -132,8 +142,8 @@ total:
 		stats.PoolsTotal = val
 		goto allocated
 	}
-	* { return &stats, genErr2(invalidInputError) }
-	$ { return &stats, genErr2(io.EOF) }
+	* { return &stats, genErr2(p.errOr(invalidInputError)) }
+	$ { return &stats, genErr2(p.errOr(io.EOF)) }
 	*/
 allocated:
 	p.tok = p.cur
@@ -146,8 +156,8 @@ allocated:
 		stats.TotalAllocatedSize = val
 		return &stats, nil
 	}
-	* { return &stats, genErr3(invalidInputError) }
-	$ { return &stats, genErr3(io.EOF) }
+	* { return &stats, genErr3(p.errOr(invalidInputError)) }
+	$ { return &stats, genErr3(p.errOr(io.EOF)) }
 	*/
 	return nil, errors.New("Reached impossible state")
 }
@@ -193,8 +203,8 @@ func ParseStatus(r io.Reader) (*ServerStatus, error) {
 		goto host
 	}
 
-	* { return &status, genSvPublicError(invalidInputError) }
-	$ { return &status, genSvPublicError(io.EOF) }
+	* { return &status, genSvPublicError(p.errOr(invalidInputError)) }
+	$ { return &status, genSvPublicError(p.errOr(io.EOF)) }
 	*/
 host:
 	p.tok = p.cur
@@ -203,8 +213,8 @@ host:
 		status.Hostname = strings.TrimSpace(string(p.buf[ss:se]))
 		goto version
 	}
-	* { return &status, genHostError(invalidInputError) }
-	$ { return &status, genHostError(io.EOF) }
+	* { return &status, genHostError(p.errOr(invalidInputError)) }
+	$ { return &status, genHostError(p.errOr(io.EOF)) }
 	*/
 version:
 	p.tok = p.cur
@@ -213,8 +223,8 @@ version:
 		status.Version = strings.TrimSpace(string(p.buf[ss:se]))
 		goto protocol
 	}
-	* { return &status, genVersionError(invalidInputError) }
-	$ { return &status, genVersionError(io.EOF) }
+	* { return &status, genVersionError(p.errOr(invalidInputError)) }
+	$ { return &status, genVersionError(p.errOr(io.EOF)) }
 	*/
 protocol:
 	p.tok = p.cur
@@ -223,8 +233,8 @@ protocol:
 		status.Protocol = strings.TrimSpace(string(p.buf[ss:se]))
 		goto mapPrefix
 	}
-	* { return &status, genProtocolError(invalidInputError) }
-	$ { return &status, genProtocolError(io.EOF) }
+	* { return &status, genProtocolError(p.errOr(invalidInputError)) }
+	$ { return &status, genProtocolError(p.errOr(io.EOF)) }
 	*/
 mapPrefix:
 	p.tok = p.cur
@@ -233,8 +243,8 @@ mapPrefix:
 		status.Map = strings.TrimSpace(string(p.buf[ss:se]))
 		goto timing
 	}
-	* { return &status, genMapError(invalidInputError) }
-	$ { return &status, genMapError(io.EOF) }
+	* { return &status, genMapError(p.errOr(invalidInputError)) }
+	$ { return &status, genMapError(p.errOr(io.EOF)) }
 	*/
 timing:
 	p.tok = p.cur
@@ -247,8 +257,8 @@ timing:
 		status.Timing.CPU = f
 		goto timingLost
 	}
-	* { return &status, genTimingError("CPU", invalidInputError) }
-	$ { return &status, genTimingError("CPU", io.EOF) }
+	* { return &status, genTimingError("CPU", p.errOr(invalidInputError)) }
+	$ { return &status, genTimingError("CPU", p.errOr(io.EOF)) }
 	*/
 timingLost:
 	p.tok = p.cur
@@ -261,8 +271,8 @@ timingLost:
 		status.Timing.Lost = f
 		goto timingAvg
 	}
-	* { return &status, genTimingError("lost", invalidInputError) }
-	$ { return &status, genTimingError("lost", io.EOF) }
+	* { return &status, genTimingError("lost", p.errOr(invalidInputError)) }
+	$ { return &status, genTimingError("lost", p.errOr(io.EOF)) }
 	*/
 timingAvg:
 	p.tok = p.cur
@@ -275,8 +285,8 @@ timingAvg:
 		status.Timing.OffsetAvg = f
 		goto timingMax
 	}
-	* { return &status, genTimingError("OffsetAvg", invalidInputError) }
-	$ { return &status, genTimingError("OffsetAvg", io.EOF) }
+	* { return &status, genTimingError("OffsetAvg", p.errOr(invalidInputError)) }
+	$ { return &status, genTimingError("OffsetAvg", p.errOr(io.EOF)) }
 	*/
 timingMax:
 	p.tok = p.cur
@@ -289,8 +299,8 @@ timingMax:
 		status.Timing.OffsetMax = f
 		goto timingSdev
 	}
-	* { return &status, genTimingError("MaxOffset", invalidInputError) }
-	$ { return &status, genTimingError("MaxOffset", io.EOF) }
+	* { return &status, genTimingError("MaxOffset", p.errOr(invalidInputError)) }
+	$ { return &status, genTimingError("MaxOffset", p.errOr(io.EOF)) }
 	*/
 timingSdev:
 	p.tok = p.cur
@@ -303,8 +313,8 @@ timingSdev:
 		status.Timing.OffsetSdev = f
 		goto players
 	}
-	* { return &status, genTimingError("Sdev", invalidInputError) }
-	$ { return &status, genTimingError("Sdev", io.EOF) }
+	* { return &status, genTimingError("Sdev", p.errOr(invalidInputError)) }
+	$ { return &status, genTimingError("Sdev", p.errOr(io.EOF)) }
 	*/
 players:
 	p.tok = p.cur
@@ -317,8 +327,8 @@ players:
 		status.PlayersActive = val
 		goto playersMax
 	}
-	* { return &status, genPlayersError("active", invalidInputError) }
-	$ { return &status, genPlayersError("active", io.EOF) }
+	* { return &status, genPlayersError("active", p.errOr(invalidInputError)) }
+	$ { return &status, genPlayersError("active", p.errOr(io.EOF)) }
 	*/
 playersMax:
 	p.tok = p.cur
@@ -334,15 +344,15 @@ playersMax:
 		}
 		return &status, nil
 	}
-	* { return &status, genPlayersError("max", invalidInputError) }
-	$ { return &status, genPlayersError("max", io.EOF) }
+	* { return &status, genPlayersError("max", p.errOr(invalidInputError)) }
+	$ { return &status, genPlayersError("max", p.errOr(io.EOF)) }
 	*/
 playersHeader:
 	p.tok = p.cur
 	/*!re2c
 	.* "\n^2IP" space+ "%pl".*"\n" { goto parsePlayers }
-	* { return &status, fmt.Errorf("Invalid input in players header, %w", invalidInputError) }
-	$ { return &status, fmt.Errorf("Error in players header, %w", io.EOF) }
+	* { return &status, fmt.Errorf("Error in players header, %w", p.errOr(invalidInputError)) }
+	$ { return &status, fmt.Errorf("Error in players header, %w", p.errOr(io.EOF)) }
 	*/
 parsePlayers:
 	for i := int64(0); i < status.PlayersActive; i++ {
@@ -357,8 +367,8 @@ parsePlayers:
 			player.IsBot = player.IP == "botclient"
 			goto playerPL
 		}
-		* { return &status, genError(invalidInputError) }
-		$ { return &status, genError(io.EOF) }
+		* { return &status, genError(p.errOr(invalidInputError)) }
+		$ { return &status, genError(p.errOr(io.EOF)) }
 		*/
 	playerPL:
 		p.tok = p.cur
@@ -374,8 +384,8 @@ parsePlayers:
 			player.PL = val
 			goto playerPing
 		}
-		* { return &status, genError(invalidInputError) }
-		$ { return &status, genError(io.EOF) }
+		* { return &status, genError(p.errOr(invalidInputError)) }
+		$ { return &status, genError(p.errOr(io.EOF)) }
 		*/
 	playerPing:
 		p.tok = p.cur
@@ -391,8 +401,8 @@ parsePlayers:
 			player.Ping = val
 			goto playerTime
 		}
-		* { return &status, genError(invalidInputError) }
-		$ { return &status, genError(io.EOF) }
+		* { return &status, genError(p.errOr(invalidInputError)) }
+		$ { return &status, genError(p.errOr(io.EOF)) }
 		*/
 	playerTime:
 		p.tok = p.cur
@@ -404,8 +414,8 @@ parsePlayers:
 			player.Time = strings.TrimSpace(string(p.buf[ss:se]))
 			goto playerFrags
 		}
-		* { return &status, genError(invalidInputError) }
-		$ { return &status, genError(io.EOF) }
+		* { return &status, genError(p.errOr(invalidInputError)) }
+		$ { return &status, genError(p.errOr(io.EOF)) }
 		*/
 	playerFrags:
 		p.tok = p.cur
@@ -421,8 +431,8 @@ parsePlayers:
 			player.Frags = val
 			goto playerNumber
 		}
-		* { return &status, genError(invalidInputError) }
-		$ { return &status, genError(io.EOF) }
+		* { return &status, genError(p.errOr(invalidInputError)) }
+		$ { return &status, genError(p.errOr(io.EOF)) }
 		*/
 	playerNumber:
 		p.tok = p.cur
@@ -438,8 +448,8 @@ parsePlayers:
 			player.Number = int32(val)
 			goto playerName
 		}
-		* { return &status, genError(invalidInputError) }
-		$ { return &status, genError(io.EOF) }
+		* { return &status, genError(p.errOr(invalidInputError)) }
+		$ { return &status, genError(p.errOr(io.EOF)) }
 		*/
 	playerName:
 		p.tok = p.cur
@@ -452,8 +462,8 @@ parsePlayers:
 			status.Players = append(status.Players, player)
 			goto playerNew
 		}
-		* { return &status, genError(invalidInputError) }
-		$ { return &status, genError(io.EOF) }
+		* { return &status, genError(p.errOr(invalidInputError)) }
+		$ { return &status, genError(p.errOr(io.EOF)) }
 		*/
 	playerNew:
 	}
@@ -474,8 +484,8 @@ func ParseServerInfo(r io.Reader) (*ServerInfo, error) {
 		info.Gametype = strings.ToLower(string(p.buf[ss:se]))
 		goto gameVersion
 	}
-	* { return nil, genError(invalidInputError) }
-	$ { return nil, genError(io.EOF) }
+	* { return nil, genError(p.errOr(invalidInputError)) }
+	$ { return nil, genError(p.errOr(io.EOF)) }
 	*/
 gameVersion:
 	genError = func(e error) error {
@@ -487,8 +497,8 @@ gameVersion:
 		info.Version = strings.ToLower(string(p.buf[ss:se]))
 		goto pureChanges
 	}
-	* { return &info, genError(invalidInputError) }
-	$ { return &info, genError(io.EOF) }
+	* { return &info, genError(p.errOr(invalidInputError)) }
+	$ { return &info, genError(p.errOr(io.EOF)) }
 	*/
 pureChanges:
 	genError = func(e error) error {
@@ -504,8 +514,8 @@ pureChanges:
 		info.PureChangesCount = val
 		goto joinAllowed
 	}
-	* { return &info, genError(invalidInputError) }
-	$ { return &info, genError(io.EOF) }
+	* { return &info, genError(p.errOr(invalidInputError)) }
+	$ { return &info, genError(p.errOr(io.EOF)) }
 	*/
 joinAllowed:
 	genError = func(e error) error {
@@ -521,8 +531,8 @@ joinAllowed:
 		info.JoinAllowedCount = val
 		goto serverFlags
 	}
-	* { return &info, genError(invalidInputError) }
-	$ { return &info, genError(io.EOF) }
+	* { return &info, genError(p.errOr(invalidInputError)) }
+	$ { return &info, genError(p.errOr(io.EOF)) }
 	*/
 serverFlags:
 	genError = func(e error) error {
@@ -538,8 +548,8 @@ serverFlags:
 		info.ServerFlags = int32(val)
 		goto termsOfService
 	}
-	* { return &info, genError(invalidInputError) }
-	$ { return &info, genError(io.EOF) }
+	* { return &info, genError(p.errOr(invalidInputError)) }
+	$ { return &info, genError(p.errOr(io.EOF)) }
 	*/
 termsOfService:
 	genError = func(e error) error {
@@ -560,8 +570,8 @@ termsOfService:
 		}
 		goto modName
 	}
-	* { return &info, genError(invalidInputError) }
-	$ { return &info, genError(io.EOF) }
+	* { return &info, genError(p.errOr(invalidInputError)) }
+	$ { return &info, genError(p.errOr(io.EOF)) }
 	*/
 modName:
 	genError = func(e error) error {
@@ -573,8 +583,8 @@ modName:
 		info.ModName = string(p.buf[ss:se])
 		goto scoreString
 	}
-	* { return &info, genError(invalidInputError) }
-	$ { return &info, genError(io.EOF) }
+	* { return &info, genError(p.errOr(invalidInputError)) }
+	$ { return &info, genError(p.errOr(io.EOF)) }
 	*/
 scoreString:
 	genError = func(e error) error {
@@ -586,8 +596,8 @@ scoreString:
 		info.ScoreString = string(p.buf[ss:se])
 		goto done
 	}
-	* { return &info, genError(invalidInputError) }
-	$ { return &info, genError(io.EOF) }
+	* { return &info, genError(p.errOr(invalidInputError)) }
+	$ { return &info, genError(p.errOr(io.EOF)) }
 	*/
 done:
 	return &info, nil
@@ -688,8 +698,8 @@ func ParseScores(r io.Reader) (*ServerScores, error) {
         (!"^7")? ":end\n" {
             return &scores, nil
         }
-        * { return &scores, genError(invalidInputError) }
-        $ { return &scores, genError(io.EOF)}
+        * { return &scores, genError(p.errOr(invalidInputError)) }
+        $ { return &scores, genError(p.errOr(io.EOF))}
         */
     }
     return &scores, nil

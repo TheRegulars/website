@@ -1,7 +1,10 @@
 package rcon
 
 import (
+	"errors"
+	"fmt"
 	"io"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -35,6 +38,17 @@ func (e *emptyReads) Read(b []byte) (int, error) {
 	return e.r.Read(b)
 }
 
+var parsers = []struct {
+	name  string
+	input string
+	parse func(io.Reader) (any, error)
+}{
+	{"status", fullServer, func(r io.Reader) (any, error) { return ParseStatus(r) }},
+	{"memstats", memstatsRcon, func(r io.Reader) (any, error) { return ParseMemstats(r) }},
+	{"info", worldstatus, func(r io.Reader) (any, error) { return ParseServerInfo(r) }},
+	{"scores", playerScores, func(r io.Reader) (any, error) { return ParseScores(r) }},
+}
+
 func TestParsersWithShortReads(t *testing.T) {
 	readers := []struct {
 		name string
@@ -46,16 +60,7 @@ func TestParsersWithShortReads(t *testing.T) {
 		{"packets", func(r io.Reader) io.Reader { return &packetReader{r, 1394} }},
 		{"empty reads", func(r io.Reader) io.Reader { return &emptyReads{r: r} }},
 	}
-	for _, p := range []struct {
-		name  string
-		input string
-		parse func(io.Reader) (any, error)
-	}{
-		{"status", fullServer, func(r io.Reader) (any, error) { return ParseStatus(r) }},
-		{"memstats", memstatsRcon, func(r io.Reader) (any, error) { return ParseMemstats(r) }},
-		{"info", worldstatus, func(r io.Reader) (any, error) { return ParseServerInfo(r) }},
-		{"scores", playerScores, func(r io.Reader) (any, error) { return ParseScores(r) }},
-	} {
+	for _, p := range parsers {
 		want, err := p.parse(strings.NewReader(p.input))
 		if err != nil {
 			t.Fatalf("%s: %v", p.name, err)
@@ -68,6 +73,19 @@ func TestParsersWithShortReads(t *testing.T) {
 				}
 				if !reflect.DeepEqual(got, want) {
 					t.Errorf("got %+v, want %+v", got, want)
+				}
+			})
+		}
+	}
+}
+
+func TestParsersReportReadErrors(t *testing.T) {
+	for _, p := range parsers {
+		for _, n := range []int{0, 5, len(p.input) / 2} {
+			t.Run(fmt.Sprintf("%s/%d bytes", p.name, n), func(t *testing.T) {
+				r := io.MultiReader(strings.NewReader(p.input[:n]), iotest.ErrReader(os.ErrDeadlineExceeded))
+				if _, err := p.parse(r); !errors.Is(err, os.ErrDeadlineExceeded) {
+					t.Errorf("Got error %v, want %v", err, os.ErrDeadlineExceeded)
 				}
 			})
 		}
