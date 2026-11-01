@@ -11,6 +11,7 @@ import (
 )
 
 const BUFSIZE = 4096
+const maxEmptyReads = 20
 var invalidInputError = errors.New("Invalid input")
 
 type readProcessor struct {
@@ -43,7 +44,7 @@ func fillReadProcessor(p *readProcessor) bool {
 		return false
 	}
 	// BUFSIZE is too small
-	if p.tok < 1 {
+	if p.tok == 0 && p.lim == BUFSIZE {
 		log.Println("BUFFSIZE in read processors is too small")
 		return false
 	}
@@ -53,20 +54,26 @@ func fillReadProcessor(p *readProcessor) bool {
 	p.lim -= p.tok
 	/*!stags:re2c format = "\tif p.@@ != -1 { p.@@ -= p.tok }\n"; */
 	p.tok = 0
-	n, err := p.stream.Read(p.buf[p.lim:BUFSIZE])
-	if err != nil {
-		if err == io.EOF {
-			p.eof = true
-		} else {
+	for i := 0; i < maxEmptyReads; i++ {
+		n, err := p.stream.Read(p.buf[p.lim:BUFSIZE])
+		if err != nil {
+			if err == io.EOF {
+				p.eof = true
+			} else {
+				return false
+			}
+		}
+		if n > 0 {
+			p.lim += n
+			p.buf[p.lim] = 0
+			return true
+		}
+		if p.eof {
 			return false
 		}
 	}
-	if n > 0 {
-		p.lim += n
-		p.buf[p.lim] = 0
-		return true
-	}
-	return !p.eof
+	log.Printf("Read processor got %d empty reads in a row", maxEmptyReads)
+	return false
 }
 
 func ParseMemstats(r io.Reader) (*ServerMemstats, error) {
@@ -186,7 +193,7 @@ func ParseStatus(r io.Reader) (*ServerStatus, error) {
 		goto host
 	}
 
-    * { fmt.Println(string(p.buf[p.cur:])); return &status, genSvPublicError(invalidInputError) }
+	* { return &status, genSvPublicError(invalidInputError) }
 	$ { return &status, genSvPublicError(io.EOF) }
 	*/
 host:
