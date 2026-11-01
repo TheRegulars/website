@@ -68,21 +68,21 @@ type ServerInfo struct {
 }
 
 type PlayerScores struct {
-	PlayerId int32 `json:"id"`
-	Name string `json:"name"`
-	Team int32 `json:"team_id"`
-	PlayingTime int64 `json:"playing_time"`
-	Scores []float64 `json:"scores"`
+	PlayerId    int32     `json:"id"`
+	Name        string    `json:"name"`
+	Team        int32     `json:"team_id"`
+	PlayingTime int64     `json:"playing_time"`
+	Scores      []float64 `json:"scores"`
 }
 
 type ServerScores struct {
-	Gametype     string `json:"gametype"`
-	Map          string `json:"map"`
-	GameTime     uint64 `json:"game_time"`
-	PlayerLabels []string `json:"player_labels"`
-	TeamLabels   []string `json:"team_labels"`
+	Gametype     string          `json:"gametype"`
+	Map          string          `json:"map"`
+	GameTime     uint64          `json:"game_time"`
+	PlayerLabels []string        `json:"player_labels"`
+	TeamLabels   []string        `json:"team_labels"`
 	TeamScores   map[int][]int64 `json:"team_scores"`
-	Players      []PlayerScores `json:"players"`
+	Players      []PlayerScores  `json:"players"`
 }
 
 type PlayerStats struct {

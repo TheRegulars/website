@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sort"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -46,11 +47,11 @@ var configSchema string
 var (
 	serverPort      = flag.Int("port", 8080, "HTTP Server port")
 	serverHost      = flag.String("addr", "", "Listen ip, empty by default")
-	shutdownTimeout = flag.Duration("shutdownTimeout", time.Second*10, "Timeout for gracefull shutdown")
+	shutdownTimeout = flag.Duration("shutdownTimeout", time.Second*10, "Timeout for graceful shutdown")
 	pprofSockPath   = flag.String("pprofSocket", "", "PProf UNIX socket path")
 )
 
-var config atomic.Value
+var config atomic.Pointer[Config]
 
 var (
 	mapsState         *MapsState
@@ -131,38 +132,39 @@ func records(w http.ResponseWriter, r *http.Request) {
 			return false
 		}
 	}
-	records, err := ReadCaptimeRecordsWithFilter(conf.GameDB, filter)
+	recs, err := ReadCaptimeRecordsWithFilter(conf.GameDB, filter)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	json, err := json.Marshal(records)
+	data, err := json.Marshal(recs)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Etag", generateEtag(json))
-	w.Write(json)
+	w.Header().Set("Etag", generateEtag(data))
+	w.Write(data)
 }
 
 func servers(w http.ResponseWriter, r *http.Request) {
-	var servers []string
+	var names []string
 
 	conf := getConfig()
 	for k := range conf.Servers {
-		servers = append(servers, k)
+		names = append(names, k)
 	}
-	json, err := json.Marshal(struct {
+	sort.Strings(names)
+	data, err := json.Marshal(struct {
 		Servers []string `json:"servers"`
-	}{servers})
+	}{names})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(json)
+	w.Write(data)
 }
 
 func server(w http.ResponseWriter, r *http.Request) {
@@ -181,18 +183,18 @@ func server(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Can't load data from server", http.StatusInternalServerError)
 		return
 	}
-	json, err := json.Marshal(status)
+	data, err := json.Marshal(status)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(json)
+	w.Write(data)
 }
 
 func info(w http.ResponseWriter, r *http.Request) {
 	var err error
-	var info *rcon.ServerInfo
+	var serverInfo *rcon.ServerInfo
 
 	conf := getConfig()
 	serverName := r.PathValue("server")
@@ -201,7 +203,7 @@ func info(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Server not found", http.StatusNotFound)
 		return
 	}
-	info, err = rcon.QueryWithRetries(time.Millisecond*1000, 3,
+	serverInfo, err = rcon.QueryWithRetries(time.Millisecond*1000, 3,
 		func(deadline time.Time) (*rcon.ServerInfo, error) {
 			return rcon.QueryRconInfo(&serverConf, deadline)
 		})
@@ -209,18 +211,18 @@ func info(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Can't load data from server", http.StatusInternalServerError)
 		return
 	}
-	json, err := json.Marshal(info)
+	data, err := json.Marshal(serverInfo)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(json)
+	w.Write(data)
 }
 
 func scores(w http.ResponseWriter, r *http.Request) {
 	var err error
-	var scores *rcon.ServerScores
+	var serverScores *rcon.ServerScores
 
 	conf := getConfig()
 	serverName := r.PathValue("server")
@@ -229,7 +231,7 @@ func scores(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Server not found", http.StatusNotFound)
 		return
 	}
-	scores, err = rcon.QueryWithRetries(time.Millisecond*1000, 3,
+	serverScores, err = rcon.QueryWithRetries(time.Millisecond*1000, 3,
 		func(deadline time.Time) (*rcon.ServerScores, error) {
 			return rcon.QueryRconScores(&serverConf, deadline)
 		})
@@ -237,20 +239,20 @@ func scores(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Can't load data from server", http.StatusInternalServerError)
 		return
 	}
-	json, err := json.Marshal(scores)
+	data, err := json.Marshal(serverScores)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(json)
+	w.Write(data)
 }
 
 func serverAll(w http.ResponseWriter, r *http.Request) {
 	var g errgroup.Group
-	var info *rcon.ServerInfo
+	var serverInfo *rcon.ServerInfo
 	var status *rcon.ServerStatus
-	var scores *rcon.ServerScores
+	var serverScores *rcon.ServerScores
 
 	conf := getConfig()
 	serverName := r.PathValue("server")
@@ -260,7 +262,7 @@ func serverAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	g.Go(func() (err error) {
-		info, err = rcon.QueryWithRetries(time.Millisecond*1000, 3,
+		serverInfo, err = rcon.QueryWithRetries(time.Millisecond*1000, 3,
 			func(deadline time.Time) (*rcon.ServerInfo, error) {
 				return rcon.QueryRconInfo(&serverConf, deadline)
 			})
@@ -274,7 +276,7 @@ func serverAll(w http.ResponseWriter, r *http.Request) {
 		return err
 	})
 	g.Go(func() (err error) {
-		scores, err = rcon.QueryWithRetries(time.Millisecond*1000, 3,
+		serverScores, err = rcon.QueryWithRetries(time.Millisecond*1000, 3,
 			func(deadline time.Time) (*rcon.ServerScores, error) {
 				return rcon.QueryRconScores(&serverConf, deadline)
 			})
@@ -285,27 +287,28 @@ func serverAll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Can't load data from server", http.StatusInternalServerError)
 		return
 	}
-	json, err := json.Marshal(ServerAll{
+	data, err := json.Marshal(ServerAll{
 		ServerStatus: status,
-		Info:         info,
-		Scores:       scores,
+		Info:         serverInfo,
+		Scores:       serverScores,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(json)
+	w.Write(data)
 }
 
 func exporters(w http.ResponseWriter, r *http.Request) {
-	var servers []string
+	var names []string
 
 	conf := getConfig()
 	for k := range conf.Servers {
-		servers = append(servers, k)
+		names = append(names, k)
 	}
-	err := exportersTemplate.Execute(w, servers)
+	sort.Strings(names)
+	err := exportersTemplate.Execute(w, names)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -317,28 +320,28 @@ func metrics(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	conf := getConfig()
-	server := r.FormValue("target")
+	serverName := r.FormValue("target")
 	templateContext := struct {
 		Name     string
 		Hostname string
 		Metrics  *rcon.ServerMetrics
 	}{
-		Name:     server,
+		Name:     serverName,
 		Hostname: "",
 		Metrics:  nil,
 	}
 
-	serverConf, ok := conf.Servers[server]
+	serverConf, ok := conf.Servers[serverName]
 	if !ok {
 		err = errors.New("Server not found")
 		return
 	}
-	metrics, err := rcon.QueryServerMetrics(serverConf, time.Millisecond*800, 3)
+	serverMetrics, err := rcon.QueryServerMetrics(serverConf, time.Millisecond*800, 3)
 	if err != nil {
 		err = errors.New("Failed to load metrics")
 		goto ErrorHandler
 	}
-	templateContext.Metrics = metrics
+	templateContext.Metrics = serverMetrics
 	templateContext.Hostname, err = os.Hostname()
 	if err != nil {
 		goto ErrorHandler
@@ -355,14 +358,14 @@ ErrorHandler:
 
 func maps(w http.ResponseWriter, r *http.Request) {
 	mapsList := mapsState.ListMaps()
-	json, err := json.Marshal(mapsList)
+	data, err := json.Marshal(mapsList)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Etag", generateEtag(json))
-	w.Write(json)
+	w.Header().Set("Etag", generateEtag(data))
+	w.Write(data)
 }
 
 func validateConfig(conf *Config) bool {
@@ -388,34 +391,24 @@ func validateConfig(conf *Config) bool {
 }
 
 func loadConfig(filename string) (*Config, bool) {
-	var config Config
+	var conf Config
 
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		log.Printf("Error reading config: %v", err)
 		return nil, false
 	}
-	err = yaml.Unmarshal(data, &config)
+	err = yaml.Unmarshal(data, &conf)
 	if err != nil {
 		log.Printf("Error parsing yaml config: %v", err)
 		return nil, false
 	}
-	ok := validateConfig(&config)
-	return &config, ok
+	ok := validateConfig(&conf)
+	return &conf, ok
 }
 
 func getConfig() *Config {
-	val := config.Load()
-	if val == nil {
-		// something stored invalid config, bug in code
-		panic("Nil config")
-	}
-	conf, ok := val.(*Config)
-	if !ok {
-		// something stored invalid config
-		panic("Stored invalid config")
-	}
-	return conf
+	return config.Load()
 }
 
 func webService() http.Handler {
@@ -438,14 +431,14 @@ func main() {
 
 	flag.Parse()
 	if flag.NArg() != 1 || *serverPort <= 0 || *serverPort > 65535 {
-		fmt.Printf("Usage: %s config.yaml\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s config.yaml\n", os.Args[0])
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
 	filename = flag.Arg(0)
 	conf, ok := loadConfig(filename)
 	if !ok {
-		fmt.Println("Configuration is invalid")
+		fmt.Fprintf(os.Stderr, "Configuration is invalid")
 		os.Exit(1)
 	}
 	config.Store(conf)
@@ -459,7 +452,7 @@ func main() {
 	}
 
 	listenAddr := net.JoinHostPort(*serverHost, strconv.Itoa(*serverPort))
-	server := http.Server{Addr: listenAddr, Handler: webService()}
+	httpServer := http.Server{Addr: listenAddr, Handler: webService()}
 	serverCtx, serverStopCtx := context.WithCancel(context.Background())
 
 	go func() {
@@ -479,7 +472,7 @@ func main() {
 					log.Println("Successfully updated config")
 				}
 			case <-sigQuit:
-				log.Println("Received gracefull shutdown event")
+				log.Println("Received graceful shutdown event")
 				shutdownCtx, cancel := context.WithTimeout(serverCtx, *shutdownTimeout)
 				go func() {
 					<-shutdownCtx.Done()
@@ -487,7 +480,7 @@ func main() {
 						log.Fatal("graceful shutdown timed out")
 					}
 				}()
-				if err := server.Shutdown(shutdownCtx); err != nil {
+				if err := httpServer.Shutdown(shutdownCtx); err != nil {
 					log.Fatal(err)
 				}
 				serverStopCtx()
@@ -497,7 +490,7 @@ func main() {
 		}
 	}()
 
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
 	// wait till all requests is done

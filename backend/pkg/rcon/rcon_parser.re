@@ -46,7 +46,7 @@ func fillReadProcessor(p *readProcessor) bool {
 	}
 	// BUFSIZE is too small
 	if p.tok == 0 && p.lim == BUFSIZE {
-		log.Println("BUFFSIZE in read processors is too small")
+		log.Println("BUFSIZE in read processors is too small")
 		return false
 	}
 	copy(p.buf[0:], p.buf[p.tok:p.lim])
@@ -608,99 +608,99 @@ func ParseScores(r io.Reader) (*ServerScores, error) {
 	var as, ae, bs, be, cs, ce, ds, de, es, ee int
 
 	p := newReadProcessor(r)
-    genError := func(e error) error {
-        return fmt.Errorf("Error parsing scores: %w", e)
-    }
-    scores.TeamScores = make(map[int][]int64)
-    scores.Players = []PlayerScores{}
-    for {
-        p.tok = p.cur
-        /*!re2c
-        (!"^7")? ":status:" @as [^_]+ @ae "_" @bs [^:]+ @be ":" @cs  num @ce "\n" {
-            scores.Gametype = string(p.buf[as:ae])
-            scores.Map = string(p.buf[bs:be])
-            val, err := strconv.ParseInt(string(p.buf[cs:ce]), 10, 64)
-            if err != nil {
-                return nil, genError(err)
-            }
-            scores.GameTime = uint64(val)
-            continue
-        }
-        (!"^7")? ":labels:player:" @as .+ @ae "\n" {
-            scores.PlayerLabels = strings.Split(strings.TrimSpace(string(p.buf[as:ae])), ",")
-            continue
-        }
-        (!"^7")? ":labels:teamscores:" @as .+ @ae "\n" {
-            scores.TeamLabels = strings.Split(strings.TrimSpace(string(p.buf[as:ae])), ",")
-            continue
-        }
-        (!"^7")? ":player:see-labels:" @as [^:]+ @ae ":" @bs num @be ":" @cs ("spectator" | "-"? num) @ce ":"
-        @ds num @de ":" @es .+ @ee "\n" {
-            // player scores : playing time : player team : player id : player name
-            // https://github.com/xonotic/xonotic-data.pk3dir/blob/cc84ebedeb4523efb23fa8c5dd1e703cd0434a23/qcsrc/server/world.qc#L1255
-            // since console and eventlog outputs using different format
-            var player PlayerScores
-            pScores := strings.Split(strings.TrimSpace(string(p.buf[as:ae])), ",")
-            for _, v := range pScores {
-                sVal, err := strconv.ParseFloat(v, 64)
-                if err != nil {
-                    return nil, genError(err)
-                }
-                player.Scores = append(player.Scores, sVal)
-            }
-            iVal, err := strconv.ParseInt(string(p.buf[bs:be]), 10, 64)
-            if err != nil {
-                return nil, genError(err)
-            }
-            player.PlayingTime = iVal
-            team := strings.TrimSpace(string(p.buf[cs:ce]))
-            if team == "spectator" {
-                player.Team = -666
-            } else {
-                iVal, err := strconv.ParseInt(team, 10, 32)
-                if err != nil {
-                    return nil, genError(err)
-                }
-                player.Team = int32(iVal)
-            }
-            iVal, err = strconv.ParseInt(strings.TrimSpace(string(p.buf[ds:de])), 10, 32)
-            if err != nil {
-                return nil, genError(err)
-            }
-            player.PlayerId = int32(iVal)
-            player.Name = strings.TrimSpace(string(p.buf[es:ee]))
-            scores.Players = append(scores.Players, player)
-            continue
-        }
-        (!"^7")? ":teamscores:see-labels:" @as [0-9,-]* @ae ":" @bs [0-9]* @be "\n" {
-            var teamScores []int64
+	genError := func(e error) error {
+		return fmt.Errorf("Error parsing scores: %w", e)
+	}
+	scores.TeamScores = make(map[int][]int64)
+	scores.Players = []PlayerScores{}
+	for {
+		p.tok = p.cur
+		/*!re2c
+		(!"^7")? ":status:" @as [^_]+ @ae "_" @bs [^:]+ @be ":" @cs  num @ce "\n" {
+			scores.Gametype = string(p.buf[as:ae])
+			scores.Map = string(p.buf[bs:be])
+			val, err := strconv.ParseInt(string(p.buf[cs:ce]), 10, 64)
+			if err != nil {
+				return nil, genError(err)
+			}
+			scores.GameTime = uint64(val)
+			continue
+		}
+		(!"^7")? ":labels:player:" @as .+ @ae "\n" {
+			scores.PlayerLabels = strings.Split(strings.TrimSpace(string(p.buf[as:ae])), ",")
+			continue
+		}
+		(!"^7")? ":labels:teamscores:" @as .+ @ae "\n" {
+			scores.TeamLabels = strings.Split(strings.TrimSpace(string(p.buf[as:ae])), ",")
+			continue
+		}
+		(!"^7")? ":player:see-labels:" @as [^:]+ @ae ":" @bs num @be ":" @cs ("spectator" | "-"? num) @ce ":"
+		@ds num @de ":" @es .+ @ee "\n" {
+			// player scores : playing time : player team : player id : player name
+			// https://github.com/xonotic/xonotic-data.pk3dir/blob/cc84ebedeb4523efb23fa8c5dd1e703cd0434a23/qcsrc/server/world.qc#L1255
+			// since console and eventlog outputs using different format
+			var player PlayerScores
+			pScores := strings.Split(strings.TrimSpace(string(p.buf[as:ae])), ",")
+			for _, v := range pScores {
+				sVal, err := strconv.ParseFloat(v, 64)
+				if err != nil {
+					return nil, genError(err)
+				}
+				player.Scores = append(player.Scores, sVal)
+			}
+			iVal, err := strconv.ParseInt(string(p.buf[bs:be]), 10, 64)
+			if err != nil {
+				return nil, genError(err)
+			}
+			player.PlayingTime = iVal
+			team := strings.TrimSpace(string(p.buf[cs:ce]))
+			if team == "spectator" {
+				player.Team = -666
+			} else {
+				iVal, err := strconv.ParseInt(team, 10, 32)
+				if err != nil {
+					return nil, genError(err)
+				}
+				player.Team = int32(iVal)
+			}
+			iVal, err = strconv.ParseInt(strings.TrimSpace(string(p.buf[ds:de])), 10, 32)
+			if err != nil {
+				return nil, genError(err)
+			}
+			player.PlayerId = int32(iVal)
+			player.Name = strings.TrimSpace(string(p.buf[es:ee]))
+			scores.Players = append(scores.Players, player)
+			continue
+		}
+		(!"^7")? ":teamscores:see-labels:" @as [0-9,-]* @ae ":" @bs [0-9]* @be "\n" {
+			var teamScores []int64
 
-            if as == ae {
-                // scores is empty
-                continue
-            }
+			if as == ae {
+				// scores is empty
+				continue
+			}
 
-            teamScoresStr := strings.Split(strings.TrimSpace(string(p.buf[as:ae])), ",")
-            for _, item := range teamScoresStr {
-                val, err := strconv.ParseInt(item, 10, 64)
-                if err != nil {
-                    return nil, genError(err)
-                }
-                teamScores = append(teamScores, val)
-            }
-            teamId, err := strconv.ParseInt(string(p.buf[bs:be]), 10, 64)
-            if err != nil {
-                return nil, genError(err)
-            }
-            scores.TeamScores[int(teamId)] = teamScores
-            continue
-        }
-        (!"^7")? ":end\n" {
-            return &scores, nil
-        }
-        * { return &scores, genError(p.errOr(invalidInputError)) }
-        $ { return &scores, genError(p.errOr(io.EOF))}
-        */
-    }
-    return &scores, nil
+			teamScoresStr := strings.Split(strings.TrimSpace(string(p.buf[as:ae])), ",")
+			for _, item := range teamScoresStr {
+				val, err := strconv.ParseInt(item, 10, 64)
+				if err != nil {
+					return nil, genError(err)
+				}
+				teamScores = append(teamScores, val)
+			}
+			teamId, err := strconv.ParseInt(string(p.buf[bs:be]), 10, 64)
+			if err != nil {
+				return nil, genError(err)
+			}
+			scores.TeamScores[int(teamId)] = teamScores
+			continue
+		}
+		(!"^7")? ":end\n" {
+			return &scores, nil
+		}
+		* { return &scores, genError(p.errOr(invalidInputError)) }
+		$ { return &scores, genError(p.errOr(io.EOF))}
+		*/
+	}
+	return &scores, nil
 }
