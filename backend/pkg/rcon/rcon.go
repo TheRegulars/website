@@ -3,6 +3,7 @@ package rcon
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -222,7 +223,10 @@ func PingServer(server *ServerConfig, deadline time.Time) (time.Duration, error)
 	defer conn.Close()
 	conn.SetDeadline(deadline)
 	readBuffer := make([]byte, XonMSS)
-	conn.Write([]byte(PingPacket))
+	_, err = conn.Write([]byte(PingPacket))
+	if err != nil {
+		return invalidDuration, err
+	}
 	start := time.Now()
 	n, err := conn.Read(readBuffer)
 	if err != nil {
@@ -233,7 +237,7 @@ func PingServer(server *ServerConfig, deadline time.Time) (time.Duration, error)
 		diff := time.Now().Sub(start)
 		return diff, nil
 	}
-	return invalidDuration, err
+	return invalidDuration, fmt.Errorf("Unexpected reply to ping: %q", readBuffer[:min(n, 32)])
 }
 
 func QueryRconMemstats(server *ServerConfig, deadline time.Time) (*ServerMemstats, error) {
