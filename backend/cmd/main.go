@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/md5"
 	_ "embed"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"flag"
 	"fmt"
