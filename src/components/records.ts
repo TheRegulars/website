@@ -32,7 +32,8 @@ export class RecordsComponent extends LitElement {
 
     constructor() {
         super();
-        this.setCurrentPage();
+        // The current page is read from the URL in connectedCallback: the router
+        // creates this element before it updates the location.
         // Added in connectedCallback and removed in disconnectedCallback
         this._broadcastUpdateHandler = (event: MessageEvent) => {
             void this.applyBroadcastUpdate(event);
@@ -175,7 +176,8 @@ export class RecordsComponent extends LitElement {
         if (!this.loaded || this.pageBy <= 0) {
             return 1;
         }
-        return Math.ceil(this.records.length / this.pageBy);
+        // An empty table still has one (empty) page
+        return Math.max(1, Math.ceil(this.records.length / this.pageBy));
     }
 
     @property({type: String})
@@ -199,28 +201,42 @@ export class RecordsComponent extends LitElement {
         super.attributeChangedCallback(name, oldValue, newValue);
     }
 
+    /**
+     * Sets currentPage from the URL hash. Without a "#page-N" hash (for example
+     * after pressing Back to "/records/") this is page 1. An out-of-range page
+     * is clamped, and the URL is corrected to match, without a new history entry.
+     */
     public setCurrentPage() {
         const match = RecordsComponent.pageRegexp.exec(window.location.hash);
-        if (match !== null) {
-            const page = parseInt(match[1], 10);
-            if (!Number.isNaN(page) && page > 0) {
-                if (!this.loaded || page <= this.pages) {
-                    this.currentPage = page;
-                } else {
-                    this.currentPage = this.pages;
-                }
-            }
+        if (match === null) {
+            this.currentPage = 1;
+            return;
+        }
+        const requested = parseInt(match[1], 10);
+        let page = requested;
+        if (page < 1) {
+            page = 1;
+        } else if (this.loaded && page > this.pages) {
+            page = this.pages;
+        }
+        this.currentPage = page;
+        if (page !== requested) {
+            window.history.replaceState(window.history.state, document.title, this.pageURL(page));
         }
     }
 
     public changePage(page: number) {
         this.currentPage = page;
-        const newUrl = document.location.pathname + `#page-${page}`;
-        window.history.pushState(window.history.state, document.title, newUrl);
+        window.history.pushState(window.history.state, document.title, this.pageURL(page));
+    }
+
+    public pageURL(page: number): string {
+        return window.location.pathname + window.location.search + `#page-${page}`;
     }
 
     public connectedCallback() {
         super.connectedCallback();
+        this.setCurrentPage();
         window.addEventListener("hashchange", this.hashChangeHandler);
         if ("serviceWorker" in navigator) {
             navigator.serviceWorker.addEventListener("message", this._broadcastUpdateHandler);
@@ -381,8 +397,10 @@ export class RecordsComponent extends LitElement {
                 value: record.val
             };
         });
-        if (this.currentPage > this.pages) {
-            this.changePage(this.pages);
+        // Now that the number of pages is known, clamp the page from the URL.
+        // A detached element must not touch the URL: it may belong to another page.
+        if (this.isConnected) {
+            this.setCurrentPage();
         }
     }
 }
