@@ -27,33 +27,16 @@ export class RecordsComponent extends LitElement {
     @property({type: Boolean}) public tooltips = true;
 
     private _dataUrl: string = "";
-    private _broadcastUpdateHandler: (evt: MessageEvent) => Promise<void>;
+    private _broadcastUpdateHandler: (evt: MessageEvent) => void;
     private hashChangeHandler: (evt: HashChangeEvent) => void;
 
     constructor() {
-        /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment,
-        @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-misused-promises
-        */
         super();
         this.setCurrentPage();
-        this._broadcastUpdateHandler = (async (event: MessageEvent) => {
-            if (event.data?.meta === "workbox-broadcast-update") {
-                const {cacheName, updateUrl} = event.data.payload;
-                if (updateUrl === this.dataUrl) {
-                    const cache = await caches.open(cacheName);
-                    const updatedResponse = await cache.match(updateUrl);
-                    if (updatedResponse) {
-                        const updatedData = await updatedResponse.json();
-                        this.recordsReceived(updatedData);
-                    }
-                }
-            }
-        }).bind(this);
-
-        if ("serviceWorker" in navigator) {
-            navigator.serviceWorker.addEventListener("message", this._broadcastUpdateHandler);
-        }
-        /* eslint-enable */
+        // Added in connectedCallback and removed in disconnectedCallback
+        this._broadcastUpdateHandler = (event: MessageEvent) => {
+            void this.applyBroadcastUpdate(event);
+        };
         this.hashChangeHandler = this.hashChange.bind(this);
     }
 
@@ -239,15 +222,16 @@ export class RecordsComponent extends LitElement {
     public connectedCallback() {
         super.connectedCallback();
         window.addEventListener("hashchange", this.hashChangeHandler);
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.addEventListener("message", this._broadcastUpdateHandler);
+        }
     }
 
     public disconnectedCallback() {
         window.removeEventListener("hashchange", this.hashChangeHandler);
-        /* eslint-disable @typescript-eslint/no-misused-promises */
         if ("serviceWorker" in navigator) {
             navigator.serviceWorker.removeEventListener("message", this._broadcastUpdateHandler);
         }
-        /* eslint-enable */
         super.disconnectedCallback();
     }
 
@@ -362,6 +346,30 @@ export class RecordsComponent extends LitElement {
             `;
         }
     }
+
+    /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment,
+    @typescript-eslint/no-unsafe-argument
+    */
+    private async applyBroadcastUpdate(event: MessageEvent) {
+        if (event.data?.meta !== "workbox-broadcast-update") {
+            return;
+        }
+        try {
+            const {cacheName, updatedURL} = event.data.payload;
+            if (updatedURL !== this.dataUrl) {
+                return;
+            }
+            const cache = await caches.open(cacheName);
+            const updatedResponse = await cache.match(updatedURL);
+            if (updatedResponse) {
+                const updatedData = await updatedResponse.json();
+                this.recordsReceived(updatedData);
+            }
+        } catch (err) {
+            console.error("Failed to apply records update", err);
+        }
+    }
+    /* eslint-enable */
 
     private recordsReceived(data: RecordsApi) {
         this.loaded = true;
