@@ -180,11 +180,13 @@ class DPTextParser {
                             return [ColorType.Hex, res];
                         }
                     } else {
+                        // Not a valid ^xRGB code: emit what was consumed as
+                        // text and leave the current character in the buffer,
+                        // since it may start another color code (e.g. "^x1^2")
                         this.state = DPTextParserState.Initial;
-                        const res = this.decoding + this.buffer[0];
+                        const res = this.decoding;
                         this.hex = 0;
                         this.decoding = "";
-                        this.buffer = this.buffer.slice(1);
                         return res;
                     }
                     break;
@@ -196,6 +198,8 @@ class DPTextParser {
     public end(): string {
         const res = this.decoding;
         this.decoding = "";
+        this.hex = 0;
+        this.state = DPTextParserState.Initial;
         return res;
     }
 }
@@ -230,25 +234,35 @@ export type ColorMap = (c: number, d: number) => string;
 export function dptextDOM(str: string, defaultColor: number = 0xfff,
                           colorMap: ColorMap = dpcolorStyle): HTMLSpanElement {
 
-    let baseElem = document.createElement("span");
+    const baseElem = document.createElement("span");
+    // Element that text is currently appended to, and the color it renders in
     let elem = baseElem;
-    let prevColor = defaultColor;
-    let parser = new DPTextParser();
+    let elemColor = defaultColor;
+    // Color selected by the most recent color code
+    let color = defaultColor;
+    const parser = new DPTextParser();
     let token: string | XonColor | null;
-    let color = prevColor;
+
+    const appendText = (text: string) => {
+        if (text.length === 0) {
+            return;
+        }
+        if (color !== elemColor) {
+            const newElem = document.createElement("span");
+            newElem.style.color = colorMap(color, defaultColor);
+            baseElem.appendChild(newElem);
+            elem = newElem;
+            elemColor = color;
+        }
+        elem.innerText += decodeQChars(text);
+    };
+
     parser.write(str);
     for (;;) {
         token = parser.next();
         if (typeof token === "string") {
-            if (color !== prevColor) {
-                let newElem = document.createElement("span");
-                newElem.style.color = colorMap(color, defaultColor);
-                baseElem.appendChild(newElem);
-                elem = newElem;
-            }
-            elem.innerText += decodeQChars(token);
+            appendText(token);
         } else if (typeof token === "object" && token !== null) {
-            prevColor = color;
             if (token[0] === ColorType.Short) {
                 color = smallColors[token[1]];
             } else {
@@ -258,7 +272,7 @@ export function dptextDOM(str: string, defaultColor: number = 0xfff,
             break;
         }
     }
-    elem.innerText += parser.end();
+    appendText(parser.end());
     return baseElem;
 }
 
