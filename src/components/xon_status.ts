@@ -54,6 +54,7 @@ export class StatusComponent extends LitElement {
     private _autorefresh: boolean = true;
     private _dataUrl: string = "";
     private _timerId: number | undefined = undefined;
+    private _pendingRequests = 0;
 
     constructor() {
         super();
@@ -308,12 +309,17 @@ export class StatusComponent extends LitElement {
             connection.addEventListener("change", this._connectionHandler);
         }
 
+        // listen for going offline / back online
+        window.addEventListener("online", this._connectionHandler);
+        window.addEventListener("offline", this._connectionHandler);
+
         // listen for visiblity changes
         if (typeof document.hidden !== "undefined") {
             document.addEventListener("visibilitychange", this._visibilityHandler);
         }
 
-        // enable auto refresh if tab is visible
+        // enable auto refresh if tab is visible and online; otherwise the
+        // visibilitychange or online event enables it later
         if (this.visible && navigator.onLine !== false) {
             this.enableAutoRefresh();
         }
@@ -325,6 +331,8 @@ export class StatusComponent extends LitElement {
         if (connection && (connection.addEventListener as any)) {
             connection.removeEventListener("change", this._connectionHandler);
         }
+        window.removeEventListener("online", this._connectionHandler);
+        window.removeEventListener("offline", this._connectionHandler);
         if (this._visibilityHandler) {
             document.removeEventListener("visibilitychange", this._visibilityHandler);
         }
@@ -334,6 +342,7 @@ export class StatusComponent extends LitElement {
 
     public loadData() {
         this.lastRequestedDate = new Date();
+        this._pendingRequests++;
         fetch(this.dataUrl).then((resp) => {
             if (!resp.ok) {
                 throw Error(resp.statusText);
@@ -345,11 +354,17 @@ export class StatusComponent extends LitElement {
             this.lastLoadedDate = new Date();
         }).catch((err) => {
             console.log("Failed to load data", err);
+        }).finally(() => {
+            this._pendingRequests--;
         });
     }
 
     public reloadData() {
-        this.loadData();
+        // Skip if a request is still running: a slow poll, or several events
+        // (e.g. "online" and the Network Information "change") arriving together
+        if (this.dataUrl && this._pendingRequests === 0) {
+            this.loadData();
+        }
     }
 
     public attributeChangedCallback(name: string, oldValue: string, newValue: string) {
@@ -416,6 +431,7 @@ export class StatusComponent extends LitElement {
     private disableAutoRefresh() {
         if (this._timerId !== undefined) {
             window.clearInterval(this._timerId);
+            this._timerId = undefined;
         }
         this._autorefresh = false;
     }
@@ -429,17 +445,17 @@ export class StatusComponent extends LitElement {
             } else {
                 this.enableAutoRefresh();
             }
-            if (this.lastRequestedDate) {
-                const currentDate = new Date();
-                const diff = currentDate.getTime() - this.lastRequestedDate.getTime();
-                if (diff > (this.refreshInterval * 1000)) {
-                    // request early update
-                    this.reloadData();
-                }
+            const stale = this.lastRequestedDate === undefined ||
+                (Date.now() - this.lastRequestedDate.getTime()) > (this.refreshInterval * 1000);
+            if (!this.loaded || stale) {
+                // request early update, e.g. when the page was opened offline
+                // and the connection is back, or the tab was hidden for long
+                this.reloadData();
             }
         }
     }
-    // called when internet connection have changed
+    // called when internet connection have changed (online/offline events
+    // and Network Information API "change" events)
     private connectionChanged(_evt: Event) {
         this.updateAutoRefresh();
     }
