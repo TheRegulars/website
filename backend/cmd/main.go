@@ -113,7 +113,7 @@ func healthz(w http.ResponseWriter, r *http.Request) {
 }
 
 func generateEtag(data []byte) string {
-	return fmt.Sprintf("%x", md5.Sum(data))
+	return fmt.Sprintf("\"%x\"", md5.Sum(data))
 }
 
 func records(w http.ResponseWriter, r *http.Request) {
