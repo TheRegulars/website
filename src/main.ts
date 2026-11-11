@@ -52,12 +52,17 @@ function documentLoad() {
     }
 }
 
-document.addEventListener("DOMcontentLoaded", documentReady);
-window.addEventListener("load", documentLoad);
-if (document.readyState !== "loading") {
+// This script may run while the document is still being parsed (no `defer`),
+// after parsing (`defer`, readyState "interactive"), or after the load event.
+// Run each init function exactly once in every case.
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", documentReady, {once: true});
+} else {
     documentReady();
 }
 
 if (document.readyState === "complete") {
     documentLoad();
+} else {
+    window.addEventListener("load", documentLoad, {once: true});
 }
