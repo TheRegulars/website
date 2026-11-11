@@ -95,7 +95,7 @@ export class MapshotTooltipComponent extends LitElement {
     }
     public set map(value: string) {
         const oldValue = this.map;
-        if (this._mapshotCache && oldValue.toLocaleUpperCase() !== value.toLowerCase()) {
+        if (this._mapshotCache && oldValue.toLowerCase() !== value.toLowerCase()) {
             this._mapshotCache.removeEventListener("load", this.handleLoad);
             this._mapshotCache = undefined;
         }
